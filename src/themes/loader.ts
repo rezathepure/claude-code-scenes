@@ -20,13 +20,11 @@ import { logForDebugging } from '../utils/debug.js'
 import { errorMessage, isENOENT } from '../utils/errors.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { jsonParse } from '../utils/slowOperations.js'
+import { getTheme, isReservedThemeName, type Theme } from '../utils/theme.js'
 import {
-  getTheme,
-  isReservedThemeName,
-  registerTheme,
-  type Theme,
-  unregisterTheme,
-} from '../utils/theme.js'
+  registerThemeWithTraits,
+  unregisterThemeWithTraits,
+} from './register.js'
 import {
   findDuplicateSlotKeys,
   parseThemeFile,
@@ -194,12 +192,12 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
   const nowPresent = new Set(themes.map(t => t.name))
   for (const previous of registeredNames) {
     if (!nowPresent.has(previous)) {
-      unregisterTheme(previous)
+      unregisterThemeWithTraits(previous)
     }
   }
 
   for (const t of themes) {
-    registerTheme(t.name, t.theme)
+    registerThemeWithTraits(t.name, t.theme, t.mode)
   }
   registeredNames = themes.map(t => t.name)
 

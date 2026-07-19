@@ -5,7 +5,7 @@ import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { StructuredDiff } from '../../components/StructuredDiff.js';
 import { Spinner } from '../../components/Spinner.js';
 import { generateTheme } from '../../themes/generate/generate.js';
-import { registerTheme, unregisterTheme } from '../../utils/theme.js';
+import { registerThemeWithTraits, unregisterThemeWithTraits } from '../../themes/register.js';
 import { findAvailableThemeName, saveGeneratedTheme } from '../../themes/save.js';
 import type { ThemeWarning } from '../../themes/schema.js';
 import type { Theme } from '../../utils/theme.js';
@@ -73,7 +73,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
 
       // Register and preview so the user sees the theme rather than a list of
       // numbers. Unregistered again if they decline.
-      registerTheme(name, result.colors as unknown as Theme);
+      registerThemeWithTraits(name, result.colors as unknown as Theme, result.mode);
       setPreviewTheme(name);
 
       setPhase({
@@ -169,7 +169,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
             })();
           } else {
             cancelPreview();
-            unregisterTheme(phase.name);
+            unregisterThemeWithTraits(phase.name);
             onDone('Theme discarded.');
           }
         }}

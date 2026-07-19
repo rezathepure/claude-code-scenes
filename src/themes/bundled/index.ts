@@ -19,7 +19,7 @@ import { loadThemeFromText } from '../loader.js'
 import type { ThemeWarning } from '../schema.js'
 import matrix from './matrix.json'
 import sakura from './sakura.json'
-import { registerTheme } from '../../utils/theme.js'
+import { registerThemeWithTraits } from '../register.js'
 
 const BUNDLED: ReadonlyArray<readonly [string, unknown]> = [
   ['matrix', matrix],
@@ -43,7 +43,7 @@ export function registerBundledThemes(): ThemeWarning[] {
     warnings.push(...result.warnings)
 
     if (result.theme) {
-      registerTheme(name, result.theme.theme)
+      registerThemeWithTraits(name, result.theme.theme, result.theme.mode)
     }
   }
 

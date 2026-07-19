@@ -43,16 +43,24 @@ describe('built-in themes (unchanged behaviour)', () => {
 
 describe('runtime themes', () => {
   test('an unregistered name is mis-classified as light (the old bug)', () => {
-    // Documents *why* registerThemeTraits is required: 'matrix' contains
+    // Documents *why* registerThemeTraits is required: the name contains
     // neither 'dark' nor 'light', so the heuristic calls it light.
-    expect(renderWith('matrix')).toBe(renderWith('light'))
+    //
+    // Uses a test-only name rather than a real theme: `matrix` and `sakura`
+    // are registered by src/themes tests running in the same process, and
+    // this assertion depends on the name being *un*registered.
+    expect(renderWith('test-only-vampire')).toBe(renderWith('light'))
   })
 
   test('registering traits gives a dark theme the dark syntax palette', () => {
-    register('matrix', { dark: true, ansi: false, daltonized: false })
+    register('test-only-vampire', {
+      dark: true,
+      ansi: false,
+      daltonized: false,
+    })
 
-    expect(renderWith('matrix')).toBe(renderWith('dark'))
-    expect(renderWith('matrix')).not.toBe(renderWith('light'))
+    expect(renderWith('test-only-vampire')).toBe(renderWith('dark'))
+    expect(renderWith('test-only-vampire')).not.toBe(renderWith('light'))
   })
 
   test('registered traits also drive the ansi palette', () => {
@@ -68,14 +76,14 @@ describe('runtime themes', () => {
   })
 
   test('unregistering restores heuristic classification', () => {
-    registerThemeTraits('matrix', {
+    registerThemeTraits('test-only-vampire', {
       dark: true,
       ansi: false,
       daltonized: false,
     })
-    expect(renderWith('matrix')).toBe(renderWith('dark'))
+    expect(renderWith('test-only-vampire')).toBe(renderWith('dark'))
 
-    unregisterThemeTraits('matrix')
-    expect(renderWith('matrix')).toBe(renderWith('light'))
+    unregisterThemeTraits('test-only-vampire')
+    expect(renderWith('test-only-vampire')).toBe(renderWith('light'))
   })
 })
