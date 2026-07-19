@@ -1,0 +1,49 @@
+{
+  "mode": "dark",
+  "description": "Phosphor-green terminal. One hue with discipline.",
+  "author": "nova theme lab",
+  "scene": { "kind": "none" },
+  "colors": {
+    "text": "rgb(200,245,205)",
+    "inverseText": "rgb(0,20,8)",
+    "inactive": "rgb(92,150,108)",
+    "inactiveShimmer": "rgb(140,200,155)",
+    "subtle": "rgb(58,102,70)",
+
+    "claude": "rgb(0,255,65)",
+    "claudeShimmer": "rgb(150,255,180)",
+    "promptBorder": "rgb(0,255,65)",
+    "promptBorderShimmer": "rgb(150,255,180)",
+    "permission": "rgb(0,255,65)",
+    "permissionShimmer": "rgb(150,255,180)",
+
+    "success": "rgb(0,255,65)",
+    "error": "rgb(255,90,70)",
+    "warning": "rgb(230,160,50)",
+    "warningShimmer": "rgb(255,200,120)",
+    "merged": "rgb(60,230,200)",
+
+    "suggestion": "rgb(60,230,200)",
+    "remember": "rgb(255,183,0)",
+    "autoAccept": "rgb(60,230,200)",
+    "planMode": "rgb(60,230,200)",
+    "bashBorder": "rgb(60,230,200)",
+    "ide": "rgb(60,230,200)",
+    "background": "rgb(60,230,200)",
+    "fastMode": "rgb(255,183,0)",
+    "fastModeShimmer": "rgb(255,220,120)",
+
+    "diffAdded": "rgb(0,60,20)",
+    "diffAddedDimmed": "rgb(0,35,12)",
+    "diffAddedWord": "rgb(0,110,35)",
+    "diffRemoved": "rgb(70,20,15)",
+    "diffRemovedDimmed": "rgb(40,12,9)",
+    "diffRemovedWord": "rgb(120,32,25)",
+
+    "bashMessageBackgroundColor": "rgb(6,26,13)",
+    "memoryBackgroundColor": "rgb(6,26,13)",
+    "userMessageBackground": "rgb(4,18,10)",
+    "userMessageBackgroundHover": "rgb(8,28,16)",
+    "selectionBg": "rgb(0,70,25)"
+  }
+}

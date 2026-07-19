@@ -629,6 +629,51 @@ const THEME_REGISTRY = new Map<string, Theme>([
 /** Pristine copies of the shipped themes, so overrides can be undone. */
 const BUILTIN_THEMES: ReadonlyMap<string, Theme> = new Map(THEME_REGISTRY)
 
+/**
+ * Notified whenever the set of available themes changes.
+ *
+ * Registering a theme mutates a plain Map, which React has no way to observe,
+ * so without this a theme file edited while the CLI is running would not
+ * appear until restart — and the currently-selected theme would keep
+ * rendering its old colours. ThemeProvider subscribes to force a re-render.
+ *
+ * Kept here rather than using src/utils/signal.ts because ink cannot import
+ * from src/ — it is the lower-level package.
+ */
+const registryListeners = new Set<() => void>()
+
+/**
+ * Subscribes to theme registry changes. Returns an unsubscribe function.
+ *
+ * Shaped for useSyncExternalStore.
+ */
+export function subscribeToThemeRegistry(listener: () => void): () => void {
+  registryListeners.add(listener)
+  return () => {
+    registryListeners.delete(listener)
+  }
+}
+
+/**
+ * Bumped on every registry mutation.
+ *
+ * useSyncExternalStore needs a snapshot that changes identity when the store
+ * does; the registry itself is a mutable Map whose identity never changes, so
+ * a counter stands in for it.
+ */
+let registryVersion = 0
+
+export function getThemeRegistryVersion(): number {
+  return registryVersion
+}
+
+function notifyThemeRegistryChanged(): void {
+  registryVersion++
+  for (const listener of registryListeners) {
+    listener()
+  }
+}
+
 /** The theme used whenever a requested name cannot be resolved. */
 const FALLBACK_THEME_NAME = 'dark'
 
@@ -720,6 +765,7 @@ export function registerTheme(name: string, theme: Theme): void {
     )
   }
   THEME_REGISTRY.set(name, theme)
+  notifyThemeRegistryChanged()
 }
 
 /**
@@ -733,7 +779,9 @@ export function unregisterTheme(name: string): void {
   if (isReservedThemeName(name)) {
     return
   }
-  THEME_REGISTRY.delete(name)
+  if (THEME_REGISTRY.delete(name)) {
+    notifyThemeRegistryChanged()
+  }
 }
 
 // Create a chalk instance with 256-color level for Apple Terminal

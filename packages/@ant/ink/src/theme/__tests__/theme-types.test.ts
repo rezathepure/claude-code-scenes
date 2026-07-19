@@ -14,6 +14,11 @@ import {
 // The registry is module-global, so anything registered here would leak into
 // every other test file in the process (bun's mock.module and module state are
 // process-wide). Track and undo.
+//
+// For the same reason these tests use `test-only-*` names rather than real
+// ones: bundled.test.ts registers `matrix` and `sakura` when it loads, and
+// test files do not run in a predictable order, so any assertion that a real
+// theme name is unregistered would pass or fail depending on scheduling.
 const registered: string[] = []
 function register(name: string, theme: Theme): void {
   registered.push(name)
@@ -63,12 +68,12 @@ describe('isKnownTheme', () => {
 
 describe('registerTheme', () => {
   test('makes a new theme resolvable and listed', () => {
-    expect(isKnownTheme('sakura')).toBe(false)
-    register('sakura', fakeTheme('petal'))
+    expect(isKnownTheme('test-only-petal')).toBe(false)
+    register('test-only-petal', fakeTheme('petal'))
 
-    expect(isKnownTheme('sakura')).toBe(true)
-    expect(getTheme('sakura').text).toBe('petal')
-    expect(getRegisteredThemeNames()).toContain('sakura')
+    expect(isKnownTheme('test-only-petal')).toBe(true)
+    expect(getTheme('test-only-petal').text).toBe('petal')
+    expect(getRegisteredThemeNames()).toContain('test-only-petal')
   })
 
   test('refuses to shadow a built-in', () => {
@@ -92,18 +97,18 @@ describe('isReservedThemeName', () => {
     for (const builtin of THEME_NAMES) {
       expect(isReservedThemeName(builtin)).toBe(true)
     }
-    expect(isReservedThemeName('matrix')).toBe(false)
-    expect(isReservedThemeName('sakura')).toBe(false)
+    expect(isReservedThemeName('test-only-rain')).toBe(false)
+    expect(isReservedThemeName('test-only-petal')).toBe(false)
   })
 })
 
 describe('unregisterTheme', () => {
   test('removes a runtime theme entirely, so it falls back', () => {
-    registerTheme('matrix', fakeTheme('rain'))
-    unregisterTheme('matrix')
+    registerTheme('test-only-rain', fakeTheme('rain'))
+    unregisterTheme('test-only-rain')
 
-    expect(isKnownTheme('matrix')).toBe(false)
-    expect(getTheme('matrix')).toBe(getTheme('dark'))
+    expect(isKnownTheme('test-only-rain')).toBe(false)
+    expect(getTheme('test-only-rain')).toBe(getTheme('dark'))
   })
 
   test('will not remove a built-in, keeping the fallback resolvable', () => {

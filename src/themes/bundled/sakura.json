@@ -1,0 +1,49 @@
+{
+  "mode": "dark",
+  "description": "A cherry-blossom night. Sakura pink leads, honey pays the bills.",
+  "author": "nova theme lab",
+  "scene": { "kind": "none" },
+  "colors": {
+    "text": "rgb(250,236,244)",
+    "inverseText": "rgb(28,14,31)",
+    "inactive": "rgb(178,142,168)",
+    "inactiveShimmer": "rgb(215,190,208)",
+    "subtle": "rgb(126,98,120)",
+
+    "claude": "rgb(255,138,190)",
+    "claudeShimmer": "rgb(255,200,225)",
+    "promptBorder": "rgb(255,138,190)",
+    "promptBorderShimmer": "rgb(255,200,225)",
+    "permission": "rgb(255,138,190)",
+    "permissionShimmer": "rgb(255,200,225)",
+
+    "success": "rgb(135,220,215)",
+    "error": "rgb(255,92,105)",
+    "warning": "rgb(245,168,118)",
+    "warningShimmer": "rgb(255,210,175)",
+    "merged": "rgb(135,220,215)",
+
+    "suggestion": "rgb(135,220,215)",
+    "remember": "rgb(255,200,130)",
+    "autoAccept": "rgb(135,220,215)",
+    "planMode": "rgb(135,220,215)",
+    "bashBorder": "rgb(135,220,215)",
+    "ide": "rgb(135,220,215)",
+    "background": "rgb(135,220,215)",
+    "fastMode": "rgb(255,200,130)",
+    "fastModeShimmer": "rgb(255,228,190)",
+
+    "diffAdded": "rgb(28,55,40)",
+    "diffAddedDimmed": "rgb(24,38,30)",
+    "diffAddedWord": "rgb(45,95,68)",
+    "diffRemoved": "rgb(70,26,38)",
+    "diffRemovedDimmed": "rgb(46,20,30)",
+    "diffRemovedWord": "rgb(115,42,60)",
+
+    "bashMessageBackgroundColor": "rgb(46,24,46)",
+    "memoryBackgroundColor": "rgb(46,24,46)",
+    "userMessageBackground": "rgb(34,18,38)",
+    "userMessageBackgroundHover": "rgb(44,24,48)",
+    "selectionBg": "rgb(74,34,62)"
+  }
+}

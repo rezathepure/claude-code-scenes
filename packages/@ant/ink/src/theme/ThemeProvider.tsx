@@ -1,8 +1,8 @@
 import { feature } from 'bun:bundle';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import useStdin from '../hooks/use-stdin.js';
 import { getSystemThemeName, type SystemTheme } from './systemTheme.js';
-import type { ThemeName, ThemeSetting } from './theme-types.js';
+import { getThemeRegistryVersion, subscribeToThemeRegistry, type ThemeName, type ThemeSetting } from './theme-types.js';
 
 // -- Config persistence injection --
 // Business layer provides these via setThemeConfigCallbacks().
@@ -69,6 +69,12 @@ export function ThemeProvider({ children, initialState, onThemeSave = defaultSav
 
   // The setting currently in effect (preview wins while picker is open)
   const activeSetting = previewTheme ?? themeSetting;
+
+  // Re-render when themes are added or removed. The registry is a plain Map,
+  // so without this a theme file edited while the CLI is running would keep
+  // rendering its old colours until restart. The version counter is only a
+  // vehicle for the subscription — nothing reads its value.
+  useSyncExternalStore(subscribeToThemeRegistry, getThemeRegistryVersion, getThemeRegistryVersion);
 
   const { internal_querier } = useStdin();
 
