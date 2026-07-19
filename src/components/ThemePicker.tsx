@@ -9,7 +9,8 @@ import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
 import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
-import type { ThemeSetting } from '../utils/theme.js';
+import { getRegisteredThemeNames, THEME_NAMES, type ThemeSetting } from '../utils/theme.js';
+import { getCachedThemeWarnings } from '../themes/loader.js';
 import { Select } from './CustomSelect/index.js';
 import { Byline, KeyboardShortcutHint } from '@anthropic/ink';
 import { getColorModuleUnavailableReason, getSyntaxTheme } from './StructuredDiff/colorDiff.js';
@@ -69,7 +70,11 @@ export function ThemePicker({
   // Always call the hook to follow React rules, but conditionally assign the exit handler
   const exitState = useExitOnCtrlCDWithKeybindings(skipExitHandling ? () => {} : undefined);
 
-  const themeOptions: { label: string; value: ThemeSetting }[] = [
+  // Built-ins keep hand-written labels and this specific order (dark/light
+  // paired by variant), which is neither alphabetical nor the order of
+  // THEME_NAMES — deriving the list from that tuple would silently reshuffle
+  // the menu. Themes registered at runtime are appended below, listed by name.
+  const builtinThemeOptions: { label: string; value: ThemeSetting }[] = [
     ...(feature('AUTO_THEME') ? [{ label: 'Auto (match terminal)', value: 'auto' as const }] : []),
     { label: 'Dark mode', value: 'dark' },
     { label: 'Light mode', value: 'light' },
@@ -90,6 +95,23 @@ export function ThemePicker({
       value: 'light-ansi',
     },
   ];
+
+  // Theme files that failed to load. Shown here because this is where someone
+  // goes looking when a theme they wrote does not appear; the explanation
+  // otherwise only reaches the debug log.
+  const failedThemes = React.useMemo(() => getCachedThemeWarnings().filter(w => w.severity === 'error'), []);
+
+  const themeOptions: { label: string; value: ThemeSetting }[] = React.useMemo(() => {
+    const builtinNames = new Set<string>(THEME_NAMES);
+    const extras = getRegisteredThemeNames()
+      .filter(name => !builtinNames.has(name))
+      .sort()
+      .map(name => ({ label: name, value: name as ThemeSetting }));
+    return [...builtinThemeOptions, ...extras];
+    // Read once at mount: builtinThemeOptions is a stable literal and the
+    // registry is the only real input. Phase 1 adds a change signal so newly
+    // loaded theme files appear without a remount.
+  }, []);
 
   const content = (
     <Box flexDirection="column" gap={1}>
@@ -170,6 +192,26 @@ export function ThemePicker({
                 : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`}
         </Text>
       </Box>
+      {failedThemes.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text color="warning">
+            {failedThemes.length} theme file
+            {failedThemes.length === 1 ? '' : 's'} could not be loaded:
+          </Text>
+          {failedThemes.map(w => (
+            <Box key={`${w.theme}:${w.message}`} flexDirection="column" marginLeft={2}>
+              <Text dimColor>
+                • {w.theme} — {w.message}
+              </Text>
+              {w.suggestion !== undefined && (
+                <Box marginLeft={2}>
+                  <Text dimColor>{w.suggestion}</Text>
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 

@@ -56,7 +56,10 @@ import { setShellIfWindows } from '../utils/windowsPaths.js'
 import { initSentry } from '../utils/sentry.js'
 import { initUser } from '../utils/user.js'
 import { initLangfuse, shutdownLangfuse } from '../services/langfuse/index.js'
-import { setThemeConfigCallbacks } from '@anthropic/ink'
+import { setThemeConfigCallbacks, validateThemeSetting } from '@anthropic/ink'
+import { registerBundledThemes } from '../themes/bundled/index.js'
+import { loadUserThemes } from '../themes/loader.js'
+import { initializeThemeWatcher } from '../themes/watcher.js'
 
 // initialize1PEventLogging is dynamically imported to defer OpenTelemetry sdk-logs/resources
 
@@ -72,8 +75,34 @@ export const init = memoize(async (): Promise<void> => {
   try {
     const configsStart = Date.now()
     enableConfigs()
+    // Themes must be registered before anything reads the stored theme
+    // preference, or validateThemeSetting below would report every user theme
+    // as missing and quietly reset the user's choice to dark.
+    registerBundledThemes()
+    const { warnings: themeWarnings } = await loadUserThemes()
+    for (const warning of themeWarnings) {
+      logForDebugging(`[themes] ${warning.theme}: ${warning.message}`, {
+        level: warning.severity === 'error' ? 'warn' : 'info',
+      })
+    }
+    // Live reload only matters when there is a UI to repaint, and holding a
+    // file watch in a one-shot `-p` run would only delay exit.
+    if (!getIsNonInteractiveSession()) {
+      void initializeThemeWatcher()
+    }
+
     setThemeConfigCallbacks({
-      loadTheme: () => getGlobalConfig().theme,
+      // Validated on read so a theme that no longer resolves is reported
+      // rather than silently becoming dark. getTheme() also falls back, but
+      // it runs on the render path and stays quiet by design.
+      loadTheme: () =>
+        validateThemeSetting(getGlobalConfig().theme, (name, fallback) => {
+          logForDebugging(
+            `Theme "${name}" could not be resolved; falling back to "${fallback}".`,
+            { level: 'warn' },
+          )
+          logForDiagnosticsNoPII('info', 'theme_unknown_fallback')
+        }),
       saveTheme: setting =>
         saveGlobalConfig(current => ({ ...current, theme: setting })),
     })

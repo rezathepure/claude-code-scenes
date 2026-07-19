@@ -93,8 +93,62 @@ function ansiIdx(index: number): Color {
 // Sentinel: a=1 means "terminal default" (matches bat convention)
 const DEFAULT_BG: Color = { r: 0, g: 0, b: 0, a: 1 }
 
+/**
+ * The properties of a Claude theme that decide which syntax palette to use.
+ */
+export type ThemeTraits = {
+  /** Palette is designed for a dark terminal background. */
+  dark: boolean
+  /** Palette is built from terminal ANSI indices rather than fixed RGB. */
+  ansi: boolean
+  /** Palette is adjusted for colour-vision deficiency. */
+  daltonized: boolean
+}
+
+const THEME_TRAITS = new Map<string, ThemeTraits>()
+
+/**
+ * Declares the traits of a theme registered at runtime.
+ *
+ * Themes loaded from user files must call this, otherwise they fall through to
+ * the name-sniffing heuristic below and are very likely mis-classified.
+ */
+export function registerThemeTraits(name: string, traits: ThemeTraits): void {
+  THEME_TRAITS.set(name, traits)
+}
+
+/** Forgets a runtime theme's traits, restoring heuristic classification. */
+export function unregisterThemeTraits(name: string): void {
+  THEME_TRAITS.delete(name)
+}
+
+/**
+ * Resolves the traits of a theme.
+ *
+ * Falls back to reading the traits out of the *name* when nothing has been
+ * registered. That heuristic is correct for the six built-ins and only for
+ * them — their names literally spell out their traits ('dark-daltonized',
+ * 'light-ansi', and so on).
+ *
+ * It is wrong for anything else: a user theme called 'matrix' or 'sakura'
+ * contains neither 'dark' nor 'light', so it would be classified as light and
+ * handed the GitHub syntax palette no matter how dark its background actually
+ * is. That is why registerThemeTraits exists.
+ */
+function resolveThemeTraits(themeName: string): ThemeTraits {
+  const registered = THEME_TRAITS.get(themeName)
+  if (registered) {
+    return registered
+  }
+  return {
+    dark: themeName.includes('dark'),
+    ansi: themeName.includes('ansi'),
+    daltonized: themeName.includes('daltonized'),
+  }
+}
+
 function detectColorMode(theme: string): ColorMode {
-  if (theme.includes('ansi')) return 'ansi'
+  if (resolveThemeTraits(theme).ansi) return 'ansi'
   const ct = process.env.COLORTERM ?? ''
   return ct === 'truecolor' || ct === '24bit' ? 'truecolor' : 'color256'
 }
@@ -281,9 +335,11 @@ const ANSI_SCOPES: Record<string, Color> = {
 }
 
 function buildTheme(themeName: string, mode: ColorMode): Theme {
-  const isDark = themeName.includes('dark')
-  const isAnsi = themeName.includes('ansi')
-  const isDaltonized = themeName.includes('daltonized')
+  const {
+    dark: isDark,
+    ansi: isAnsi,
+    daltonized: isDaltonized,
+  } = resolveThemeTraits(themeName)
   const tc = mode === 'truecolor'
 
   if (isAnsi) {
