@@ -3,6 +3,7 @@ import {
   getRegisteredThemeNames,
   getTheme,
   isKnownTheme,
+  isReservedThemeName,
   registerTheme,
   THEME_NAMES,
   type Theme,
@@ -70,29 +71,46 @@ describe('registerTheme', () => {
     expect(getRegisteredThemeNames()).toContain('sakura')
   })
 
-  test('can override a built-in', () => {
-    register('dark', fakeTheme('overridden'))
-    expect(getTheme('dark').text).toBe('overridden')
+  test('refuses to shadow a built-in', () => {
+    // `dark` is the fallback every unresolvable name lands on. Letting a user
+    // file replace it would take the escape hatch down with it.
+    expect(() => registerTheme('dark', fakeTheme('overridden'))).toThrow(
+      /reserved/,
+    )
+    expect(getTheme('dark').text).not.toBe('overridden')
+  })
+
+  test('refuses every built-in name, not just dark', () => {
+    for (const builtin of THEME_NAMES) {
+      expect(() => registerTheme(builtin, fakeTheme('x'))).toThrow(/reserved/)
+    }
+  })
+})
+
+describe('isReservedThemeName', () => {
+  test('covers exactly the shipped themes', () => {
+    for (const builtin of THEME_NAMES) {
+      expect(isReservedThemeName(builtin)).toBe(true)
+    }
+    expect(isReservedThemeName('matrix')).toBe(false)
+    expect(isReservedThemeName('sakura')).toBe(false)
   })
 })
 
 describe('unregisterTheme', () => {
-  test('restores the built-in palette after an override', () => {
-    const original = getTheme('dark').text
-    registerTheme('dark', fakeTheme('overridden'))
-    expect(getTheme('dark').text).toBe('overridden')
-
-    unregisterTheme('dark')
-    expect(getTheme('dark').text).toBe(original)
-    expect(isKnownTheme('dark')).toBe(true)
-  })
-
-  test('removes a non-built-in entirely, so it falls back', () => {
+  test('removes a runtime theme entirely, so it falls back', () => {
     registerTheme('matrix', fakeTheme('rain'))
     unregisterTheme('matrix')
 
     expect(isKnownTheme('matrix')).toBe(false)
     expect(getTheme('matrix')).toBe(getTheme('dark'))
+  })
+
+  test('will not remove a built-in, keeping the fallback resolvable', () => {
+    unregisterTheme('dark')
+
+    expect(isKnownTheme('dark')).toBe(true)
+    expect(typeof getTheme('dark').text).toBe('string')
   })
 })
 

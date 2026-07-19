@@ -24,6 +24,7 @@ export {
   getRegisteredThemeNames,
   getTheme,
   isKnownTheme,
+  isReservedThemeName,
   registerTheme,
   THEME_NAMES,
   THEME_SETTINGS,

@@ -691,26 +691,49 @@ export function validateThemeSetting(
 }
 
 /**
+ * True for the six names shipped with the binary, which runtime themes may
+ * not take over.
+ *
+ * Unlike agents or keybindings — where user config deliberately beats the
+ * built-in — a theme named `dark` would be shadowing the *fallback target*
+ * itself. Every unresolvable name in the app resolves to `dark`, so a broken
+ * user `dark.json` would take the escape hatch down with it. Callers loading
+ * user files should check this and report a warning; `registerTheme` also
+ * refuses, so the invariant cannot be broken by a bug upstream.
+ */
+export function isReservedThemeName(name: string): boolean {
+  return BUILTIN_THEMES.has(name)
+}
+
+/**
  * Adds or replaces a runtime theme.
  *
- * Built-ins may be overridden — a user theme file named `dark` shadows the
- * shipped one, which matches how the rest of the codebase resolves
- * user-authored config over built-ins.
+ * Throws for a reserved name. That is a programmer error, not a user error:
+ * anything loading user-authored files must filter with `isReservedThemeName`
+ * first and surface a warning, because those paths must never throw.
  */
 export function registerTheme(name: string, theme: Theme): void {
+  if (isReservedThemeName(name)) {
+    throw new Error(
+      `Cannot register theme "${name}": built-in theme names are reserved. ` +
+        `Check isReservedThemeName() before registering.`,
+    )
+  }
   THEME_REGISTRY.set(name, theme)
 }
 
 /**
- * Removes a runtime theme, restoring the built-in of the same name if there
- * was one. Used when a theme file is deleted or stops validating.
+ * Removes a runtime theme. Used when a theme file is deleted or stops
+ * validating; anything still selecting it then falls back to `dark`.
+ *
+ * Silently ignores built-in names — removing one would leave the fallback
+ * unresolvable.
  */
 export function unregisterTheme(name: string): void {
-  THEME_REGISTRY.delete(name)
-  const builtin = BUILTIN_THEMES.get(name)
-  if (builtin) {
-    THEME_REGISTRY.set(name, builtin)
+  if (isReservedThemeName(name)) {
+    return
   }
+  THEME_REGISTRY.delete(name)
 }
 
 // Create a chalk instance with 256-color level for Apple Terminal
