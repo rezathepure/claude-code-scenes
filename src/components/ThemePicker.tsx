@@ -9,7 +9,7 @@ import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
 import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
-import type { ThemeSetting } from '../utils/theme.js';
+import { getRegisteredThemeNames, THEME_NAMES, type ThemeSetting } from '../utils/theme.js';
 import { Select } from './CustomSelect/index.js';
 import { Byline, KeyboardShortcutHint } from '@anthropic/ink';
 import { getColorModuleUnavailableReason, getSyntaxTheme } from './StructuredDiff/colorDiff.js';
@@ -69,7 +69,11 @@ export function ThemePicker({
   // Always call the hook to follow React rules, but conditionally assign the exit handler
   const exitState = useExitOnCtrlCDWithKeybindings(skipExitHandling ? () => {} : undefined);
 
-  const themeOptions: { label: string; value: ThemeSetting }[] = [
+  // Built-ins keep hand-written labels and this specific order (dark/light
+  // paired by variant), which is neither alphabetical nor the order of
+  // THEME_NAMES — deriving the list from that tuple would silently reshuffle
+  // the menu. Themes registered at runtime are appended below, listed by name.
+  const builtinThemeOptions: { label: string; value: ThemeSetting }[] = [
     ...(feature('AUTO_THEME') ? [{ label: 'Auto (match terminal)', value: 'auto' as const }] : []),
     { label: 'Dark mode', value: 'dark' },
     { label: 'Light mode', value: 'light' },
@@ -90,6 +94,18 @@ export function ThemePicker({
       value: 'light-ansi',
     },
   ];
+
+  const themeOptions: { label: string; value: ThemeSetting }[] = React.useMemo(() => {
+    const builtinNames = new Set<string>(THEME_NAMES);
+    const extras = getRegisteredThemeNames()
+      .filter(name => !builtinNames.has(name))
+      .sort()
+      .map(name => ({ label: name, value: name as ThemeSetting }));
+    return [...builtinThemeOptions, ...extras];
+    // Read once at mount: builtinThemeOptions is a stable literal and the
+    // registry is the only real input. Phase 1 adds a change signal so newly
+    // loaded theme files appear without a remount.
+  }, []);
 
   const content = (
     <Box flexDirection="column" gap={1}>

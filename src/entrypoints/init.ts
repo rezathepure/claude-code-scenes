@@ -56,7 +56,7 @@ import { setShellIfWindows } from '../utils/windowsPaths.js'
 import { initSentry } from '../utils/sentry.js'
 import { initUser } from '../utils/user.js'
 import { initLangfuse, shutdownLangfuse } from '../services/langfuse/index.js'
-import { setThemeConfigCallbacks } from '@anthropic/ink'
+import { setThemeConfigCallbacks, validateThemeSetting } from '@anthropic/ink'
 
 // initialize1PEventLogging is dynamically imported to defer OpenTelemetry sdk-logs/resources
 
@@ -73,7 +73,17 @@ export const init = memoize(async (): Promise<void> => {
     const configsStart = Date.now()
     enableConfigs()
     setThemeConfigCallbacks({
-      loadTheme: () => getGlobalConfig().theme,
+      // Validated on read so a theme that no longer resolves is reported
+      // rather than silently becoming dark. getTheme() also falls back, but
+      // it runs on the render path and stays quiet by design.
+      loadTheme: () =>
+        validateThemeSetting(getGlobalConfig().theme, (name, fallback) => {
+          logForDebugging(
+            `Theme "${name}" could not be resolved; falling back to "${fallback}".`,
+            { level: 'warn' },
+          )
+          logForDiagnosticsNoPII('info', 'theme_unknown_fallback')
+        }),
       saveTheme: setting =>
         saveGlobalConfig(current => ({ ...current, theme: setting })),
     })

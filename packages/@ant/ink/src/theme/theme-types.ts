@@ -97,8 +97,22 @@ export const THEME_NAMES = [
   'dark-ansi',
 ] as const
 
-/** A renderable theme. Always resolvable to a concrete color palette. */
-export type ThemeName = (typeof THEME_NAMES)[number]
+/** One of the themes compiled into the binary. */
+export type BuiltinThemeName = (typeof THEME_NAMES)[number]
+
+/**
+ * A renderable theme. Always resolvable to a concrete color palette.
+ *
+ * This is intentionally wider than the built-in list: themes can also be
+ * registered at runtime from user-authored files, and those names are not
+ * knowable at compile time. The `(string & {})` arm keeps editor autocomplete
+ * working for the built-ins while still accepting an arbitrary name.
+ *
+ * Because any string is assignable, a name reaching `getTheme` may not exist.
+ * That is handled by falling back to `dark` rather than by the type system —
+ * use `isKnownTheme` when you need to tell "missing" from "present".
+ */
+export type ThemeName = BuiltinThemeName | (string & {})
 
 export const THEME_SETTINGS = ['auto', ...THEME_NAMES] as const
 
@@ -106,7 +120,7 @@ export const THEME_SETTINGS = ['auto', ...THEME_NAMES] as const
  * A theme preference as stored in user config. `'auto'` follows the system
  * dark/light mode and is resolved to a ThemeName at runtime.
  */
-export type ThemeSetting = (typeof THEME_SETTINGS)[number]
+export type ThemeSetting = 'auto' | ThemeName
 
 /**
  * Light theme using explicit RGB values to avoid inconsistencies
@@ -595,20 +609,107 @@ const darkDaltonizedTheme: Theme = {
   rainbow_violet_shimmer: 'rgb(230,180,210)',
 }
 
+/**
+ * The set of themes that can currently be rendered.
+ *
+ * Seeded with the built-ins and added to at runtime by `registerTheme` when
+ * user-authored theme files are loaded. Registration is deliberately a plain
+ * mutable map rather than a React context: `getTheme` is called from
+ * non-React code (imperative colorizers, tool UIs) and must stay synchronous.
+ */
+const THEME_REGISTRY = new Map<string, Theme>([
+  ['dark', darkTheme],
+  ['light', lightTheme],
+  ['light-ansi', lightAnsiTheme],
+  ['dark-ansi', darkAnsiTheme],
+  ['light-daltonized', lightDaltonizedTheme],
+  ['dark-daltonized', darkDaltonizedTheme],
+])
+
+/** Pristine copies of the shipped themes, so overrides can be undone. */
+const BUILTIN_THEMES: ReadonlyMap<string, Theme> = new Map(THEME_REGISTRY)
+
+/** The theme used whenever a requested name cannot be resolved. */
+const FALLBACK_THEME_NAME = 'dark'
+
+/**
+ * Resolves a theme name to a palette, falling back to `dark` for unknown names.
+ *
+ * The fallback is load-bearing: a user can select a theme from a file and then
+ * delete that file, and every render between that deletion and the next config
+ * write goes through here. Throwing would take the UI down; returning dark
+ * keeps it usable. Callers that need to *detect* the missing case should ask
+ * `isKnownTheme` first — see the config validation in src/utils/config.ts,
+ * which warns the user rather than letting the fallback happen silently.
+ */
 export function getTheme(themeName: ThemeName): Theme {
-  switch (themeName) {
-    case 'light':
-      return lightTheme
-    case 'light-ansi':
-      return lightAnsiTheme
-    case 'dark-ansi':
-      return darkAnsiTheme
-    case 'light-daltonized':
-      return lightDaltonizedTheme
-    case 'dark-daltonized':
-      return darkDaltonizedTheme
-    default:
-      return darkTheme
+  return (
+    THEME_REGISTRY.get(themeName) ?? THEME_REGISTRY.get(FALLBACK_THEME_NAME)!
+  )
+}
+
+/** True if `name` resolves to a real palette rather than the fallback. */
+export function isKnownTheme(name: string): boolean {
+  return THEME_REGISTRY.has(name)
+}
+
+/** Every currently renderable theme name, built-in and registered alike. */
+export function getRegisteredThemeNames(): string[] {
+  return [...THEME_REGISTRY.keys()]
+}
+
+// Names already reported, so a warning is emitted once per name rather than
+// on every config read.
+const reportedUnknownThemes = new Set<string>()
+
+/**
+ * Checks a stored theme preference and reports it if it cannot be resolved.
+ *
+ * `getTheme` falls back silently because it runs on the render path. This is
+ * the loud counterpart, meant to be called once where the preference is read
+ * from config: without it, a user whose theme file was deleted or renamed just
+ * sees dark and has no idea their choice was dropped.
+ *
+ * Returns the setting unchanged when it is usable, otherwise the fallback.
+ *
+ * ORDERING: only call this once user theme files have been registered.
+ * Called earlier it would report every user theme as missing.
+ */
+export function validateThemeSetting(
+  setting: ThemeSetting,
+  onUnknown?: (name: string, fallback: string) => void,
+): ThemeSetting {
+  // 'auto' resolves against the system, not the registry.
+  if (setting === 'auto' || isKnownTheme(setting)) {
+    return setting
+  }
+  if (!reportedUnknownThemes.has(setting)) {
+    reportedUnknownThemes.add(setting)
+    onUnknown?.(setting, FALLBACK_THEME_NAME)
+  }
+  return FALLBACK_THEME_NAME
+}
+
+/**
+ * Adds or replaces a runtime theme.
+ *
+ * Built-ins may be overridden — a user theme file named `dark` shadows the
+ * shipped one, which matches how the rest of the codebase resolves
+ * user-authored config over built-ins.
+ */
+export function registerTheme(name: string, theme: Theme): void {
+  THEME_REGISTRY.set(name, theme)
+}
+
+/**
+ * Removes a runtime theme, restoring the built-in of the same name if there
+ * was one. Used when a theme file is deleted or stops validating.
+ */
+export function unregisterTheme(name: string): void {
+  THEME_REGISTRY.delete(name)
+  const builtin = BUILTIN_THEMES.get(name)
+  if (builtin) {
+    THEME_REGISTRY.set(name, builtin)
   }
 }
 
