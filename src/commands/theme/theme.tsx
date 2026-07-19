@@ -4,6 +4,8 @@ import { Pane } from '@anthropic/ink';
 import { ThemePicker } from '../../components/ThemePicker.js';
 import { useTheme } from '@anthropic/ink';
 import type { LocalJSXCommandCall } from '../../types/command.js';
+import { parseThemeArgs } from './parseArgs.js';
+import { ThemeCreator } from './ThemeCreator.js';
 
 type Props = {
   onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void;
@@ -28,6 +30,16 @@ function ThemePickerCommand({ onDone }: Props): React.ReactNode {
   );
 }
 
-export const call: LocalJSXCommandCall = async (onDone, _context) => {
-  return <ThemePickerCommand onDone={onDone} />;
+export const call: LocalJSXCommandCall = async (onDone, _context, args) => {
+  const parsed = parseThemeArgs(args ?? '');
+
+  switch (parsed.kind) {
+    case 'create':
+      return <ThemeCreator description={parsed.description} onDone={onDone} />;
+    case 'error':
+      onDone(parsed.message, { display: 'system' });
+      return null;
+    case 'picker':
+      return <ThemePickerCommand onDone={onDone} />;
+  }
 };
