@@ -137,6 +137,19 @@ export function loadThemeFromText(
 let registeredNames: string[] = []
 
 /**
+ * Warnings from the last load, so the UI can show them.
+ *
+ * Without this a theme file that fails to parse simply never appears, and the
+ * author has no way to find out why — the explanation exists but only reaches
+ * the debug log. Mirrors getCachedKeybindingWarnings.
+ */
+let cachedWarnings: ThemeWarning[] = []
+
+export function getCachedThemeWarnings(): ThemeWarning[] {
+  return cachedWarnings
+}
+
+/**
  * Scans ~/.claude/themes, registers everything valid, and returns what was
  * found alongside anything worth telling the user.
  *
@@ -152,6 +165,9 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
   try {
     entries = await readdir(dir)
   } catch (error) {
+    // Cleared on every exit path, so a fixed or deleted file stops being
+    // reported the next time round.
+    cachedWarnings = []
     if (isENOENT(error)) {
       // No themes directory is the normal case, not a problem.
       return { themes: [], warnings: [] }
@@ -207,6 +223,7 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
     )
   }
 
+  cachedWarnings = warnings
   return { themes, warnings }
 }
 

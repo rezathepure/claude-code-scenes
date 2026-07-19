@@ -217,3 +217,34 @@ describe('resolveThemeColors', () => {
     expect(resolved).toEqual(dark)
   })
 })
+
+describe('load warnings are cached for the UI', () => {
+  test('a rejected file is reportable rather than silently missing', async () => {
+    // The gap this closes: a theme file with the wrong shape produced a good
+    // error message that only ever reached the debug log, so from the author's
+    // side the theme just never appeared.
+    const { getCachedThemeWarnings, loadUserThemes } = await import(
+      '../loader.js'
+    )
+
+    const result = await loadUserThemes()
+
+    // The cache must be exactly what the load produced, so whatever the picker
+    // renders is what actually happened rather than a stale snapshot.
+    expect(getCachedThemeWarnings()).toEqual(result.warnings)
+  })
+
+  test('the cache is replaced, not appended to, across loads', async () => {
+    // Otherwise fixing a broken theme file would leave its error on screen
+    // forever.
+    const { getCachedThemeWarnings, loadUserThemes } = await import(
+      '../loader.js'
+    )
+
+    await loadUserThemes()
+    const first = getCachedThemeWarnings().length
+    await loadUserThemes()
+
+    expect(getCachedThemeWarnings().length).toBe(first)
+  })
+})

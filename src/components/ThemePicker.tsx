@@ -10,6 +10,7 @@ import { useAppState, useSetAppState } from '../state/AppState.js';
 import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
 import { getRegisteredThemeNames, THEME_NAMES, type ThemeSetting } from '../utils/theme.js';
+import { getCachedThemeWarnings } from '../themes/loader.js';
 import { Select } from './CustomSelect/index.js';
 import { Byline, KeyboardShortcutHint } from '@anthropic/ink';
 import { getColorModuleUnavailableReason, getSyntaxTheme } from './StructuredDiff/colorDiff.js';
@@ -94,6 +95,11 @@ export function ThemePicker({
       value: 'light-ansi',
     },
   ];
+
+  // Theme files that failed to load. Shown here because this is where someone
+  // goes looking when a theme they wrote does not appear; the explanation
+  // otherwise only reaches the debug log.
+  const failedThemes = React.useMemo(() => getCachedThemeWarnings().filter(w => w.severity === 'error'), []);
 
   const themeOptions: { label: string; value: ThemeSetting }[] = React.useMemo(() => {
     const builtinNames = new Set<string>(THEME_NAMES);
@@ -186,6 +192,26 @@ export function ThemePicker({
                 : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`}
         </Text>
       </Box>
+      {failedThemes.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text color="warning">
+            {failedThemes.length} theme file
+            {failedThemes.length === 1 ? '' : 's'} could not be loaded:
+          </Text>
+          {failedThemes.map(w => (
+            <Box key={`${w.theme}:${w.message}`} flexDirection="column" marginLeft={2}>
+              <Text dimColor>
+                • {w.theme} — {w.message}
+              </Text>
+              {w.suggestion !== undefined && (
+                <Box marginLeft={2}>
+                  <Text dimColor>{w.suggestion}</Text>
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 
