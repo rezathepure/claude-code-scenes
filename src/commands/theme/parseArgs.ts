@@ -14,6 +14,8 @@
 export type ParsedThemeCommand =
   | { kind: 'picker' }
   | { kind: 'create'; description: string }
+  | { kind: 'export'; source: string }
+  | { kind: 'delete'; name: string }
   | { kind: 'error'; message: string }
 
 /**
@@ -66,20 +68,40 @@ export function parseThemeArgs(args: string): ParsedThemeCommand {
   const subCmd = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)
   const rest = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1).trim()
 
-  if (subCmd.toLowerCase() !== 'create') {
-    return {
-      kind: 'error',
-      message: `Unknown option "${subCmd}". Use "/theme" to pick a theme, or "/theme create <description>" to generate one.`,
-    }
-  }
+  switch (subCmd.toLowerCase()) {
+    case 'create':
+      if (rest.length === 0) {
+        return {
+          kind: 'error',
+          message:
+            'Describe the theme you want, for example: /theme create a moody vampire castle',
+        }
+      }
+      return { kind: 'create', description: rest }
 
-  if (rest.length === 0) {
-    return {
-      kind: 'error',
-      message:
-        'Describe the theme you want, for example: /theme create a moody vampire castle',
-    }
-  }
+    case 'export':
+      if (rest.length === 0) {
+        return {
+          kind: 'error',
+          message:
+            'Name a theme to copy, for example: /theme export dark — this writes an editable copy you can start from.',
+        }
+      }
+      return { kind: 'export', source: rest }
 
-  return { kind: 'create', description: rest }
+    case 'delete':
+      if (rest.length === 0) {
+        return {
+          kind: 'error',
+          message: 'Name the theme to delete, for example: /theme delete eee',
+        }
+      }
+      return { kind: 'delete', name: rest }
+
+    default:
+      return {
+        kind: 'error',
+        message: `Unknown option "${subCmd}". Use "/theme" to pick one, "/theme create <description>" to generate one, "/theme export <name>" to copy one for editing, or "/theme delete <name>" to remove one.`,
+      }
+  }
 }

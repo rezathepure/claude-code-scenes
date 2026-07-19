@@ -38,11 +38,11 @@ describe('parseThemeArgs', () => {
     }
   })
 
-  test('an unknown subcommand names both valid forms', () => {
-    const parsed = parseThemeArgs('delete matrix')
+  test('an unknown subcommand is quoted back with the valid forms', () => {
+    const parsed = parseThemeArgs('frobnicate matrix')
     expect(parsed.kind).toBe('error')
     if (parsed.kind === 'error') {
-      expect(parsed.message).toContain('delete')
+      expect(parsed.message).toContain('frobnicate')
       expect(parsed.message).toContain('/theme create')
     }
   })
@@ -77,5 +77,41 @@ describe('themeNameFromDescription', () => {
       'an extraordinarily elaborate description that simply will not stop going on',
     )
     expect(long.length).toBeLessThanOrEqual(40)
+  })
+})
+
+describe('export and delete subcommands', () => {
+  test('export takes a theme name', () => {
+    expect(parseThemeArgs('export dark')).toEqual({
+      kind: 'export',
+      source: 'dark',
+    })
+  })
+
+  test('delete takes a theme name', () => {
+    expect(parseThemeArgs('delete eee')).toEqual({
+      kind: 'delete',
+      name: 'eee',
+    })
+  })
+
+  test('each explains itself when given no name', () => {
+    for (const sub of ['export', 'delete']) {
+      const parsed = parseThemeArgs(sub)
+      expect(parsed.kind).toBe('error')
+      if (parsed.kind === 'error') {
+        expect(parsed.message).toContain(`/theme ${sub}`)
+      }
+    }
+  })
+
+  test('the unknown-subcommand message lists every form', () => {
+    const parsed = parseThemeArgs('frobnicate x')
+    expect(parsed.kind).toBe('error')
+    if (parsed.kind === 'error') {
+      expect(parsed.message).toContain('create')
+      expect(parsed.message).toContain('export')
+      expect(parsed.message).toContain('delete')
+    }
   })
 })

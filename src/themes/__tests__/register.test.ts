@@ -80,12 +80,26 @@ describe('registering a theme also registers its syntax traits', () => {
 describe('the bundled themes are classified correctly', () => {
   registerBundledThemes()
 
-  test('matrix and sakura get dark syntax highlighting', () => {
-    // Both names contain neither "dark" nor "light", so both were affected by
-    // the same bug.
-    for (const name of getBundledThemeNames()) {
-      expect(renderWith(name)).toBe(renderWith('dark'))
-      expect(renderWith(name)).not.toBe(renderWith('light'))
-    }
+  // None of these names contains "dark" or "light", so every one of them was
+  // affected by the name-sniffing bug. Listed explicitly rather than derived,
+  // so a theme shipped with the wrong mode fails here.
+  const expected: Array<[string, 'dark' | 'light']> = [
+    ['matrix', 'dark'],
+    ['sakura', 'dark'],
+    ['parchment', 'light'],
+  ]
+
+  test('covers every bundled theme', () => {
+    expect(expected.map(([n]) => n).sort()).toEqual(
+      getBundledThemeNames().sort(),
+    )
   })
+
+  for (const [name, mode] of expected) {
+    test(`${name} gets ${mode} syntax highlighting`, () => {
+      const opposite = mode === 'dark' ? 'light' : 'dark'
+      expect(renderWith(name)).toBe(renderWith(mode))
+      expect(renderWith(name)).not.toBe(renderWith(opposite))
+    })
+  }
 })

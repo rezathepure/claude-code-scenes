@@ -55,6 +55,10 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
   // Name is chosen once so retries and the final save agree.
   const nameRef = React.useRef<string | null>(null);
 
+  // Bumped to ask for another attempt. Each generation is independent, so a
+  // retry is a fresh design rather than a refinement of the last one.
+  const [attempt, setAttempt] = React.useState(0);
+
   React.useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
@@ -91,7 +95,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       cancelled = true;
       controller.abort();
     };
-  }, [description, setPreviewTheme]);
+  }, [description, setPreviewTheme, attempt]);
 
   if (phase.kind === 'generating') {
     return (
@@ -149,9 +153,19 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       <Select
         options={[
           { label: 'Keep this theme', value: 'keep' },
+          { label: 'Try again', value: 'retry' },
           { label: 'Discard it', value: 'discard' },
         ]}
         onChange={(choice: string) => {
+          if (choice === 'retry') {
+            // Drop the rejected attempt before asking for another, so the
+            // preview does not keep showing a theme that no longer exists.
+            cancelPreview();
+            unregisterThemeWithTraits(phase.name);
+            setPhase({ kind: 'generating' });
+            setAttempt(n => n + 1);
+            return;
+          }
           if (choice === 'keep') {
             void (async () => {
               const saved = await saveGeneratedTheme(phase.name, {

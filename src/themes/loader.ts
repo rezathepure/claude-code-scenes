@@ -14,13 +14,17 @@
  *  - **ENOENT is not a problem.** No themes directory just means no themes.
  */
 
-import { readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { logForDebugging } from '../utils/debug.js'
 import { errorMessage, isENOENT } from '../utils/errors.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { jsonParse } from '../utils/slowOperations.js'
 import { getTheme, isReservedThemeName, type Theme } from '../utils/theme.js'
+import {
+  serializeThemeJsonSchema,
+  THEME_SCHEMA_FILENAME,
+} from './jsonSchema.js'
 import {
   registerThemeWithTraits,
   unregisterThemeWithTraits,
@@ -178,7 +182,13 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
     return { themes: [], warnings: [] }
   }
 
-  const files = entries.filter(e => e.endsWith('.json')).sort()
+  // Keep the schema current so editors can complete slot names. Written on
+  // every load rather than once, so it tracks slots added by an upgrade.
+  void writeThemeJsonSchema(dir)
+
+  const files = entries
+    .filter(e => e.endsWith('.json') && e !== THEME_SCHEMA_FILENAME)
+    .sort()
 
   for (const file of files) {
     const name = file.slice(0, -'.json'.length)
@@ -225,6 +235,24 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
 
   cachedWarnings = warnings
   return { themes, warnings }
+}
+
+/**
+ * Drops a JSON Schema next to the theme files.
+ *
+ * Best effort — a read-only or full disk should cost you editor completion,
+ * not your themes, so failures are swallowed rather than reported.
+ */
+async function writeThemeJsonSchema(dir: string): Promise<void> {
+  try {
+    await writeFile(
+      join(dir, THEME_SCHEMA_FILENAME),
+      serializeThemeJsonSchema(),
+      'utf-8',
+    )
+  } catch {
+    // Not worth telling the user about.
+  }
 }
 
 /** Test seam: forget what has been registered without touching the registry. */

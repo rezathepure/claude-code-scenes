@@ -1,0 +1,49 @@
+{
+  "mode": "light",
+  "description": "Warm paper and sepia ink. Sienna leads, slate marks the tools.",
+  "author": "nova theme lab",
+  "scene": { "kind": "none" },
+  "colors": {
+    "text": "rgb(52,38,28)",
+    "inverseText": "rgb(250,246,238)",
+    "inactive": "rgb(112,94,78)",
+    "inactiveShimmer": "rgb(158,140,122)",
+    "subtle": "rgb(168,152,134)",
+
+    "claude": "rgb(158,68,28)",
+    "claudeShimmer": "rgb(204,116,72)",
+    "promptBorder": "rgb(178,96,52)",
+    "promptBorderShimmer": "rgb(214,140,96)",
+    "permission": "rgb(158,68,28)",
+    "permissionShimmer": "rgb(204,116,72)",
+
+    "success": "rgb(46,104,64)",
+    "error": "rgb(164,32,32)",
+    "warning": "rgb(150,94,12)",
+    "warningShimmer": "rgb(198,142,52)",
+    "merged": "rgb(58,90,124)",
+
+    "suggestion": "rgb(58,90,124)",
+    "remember": "rgb(132,96,16)",
+    "autoAccept": "rgb(58,90,124)",
+    "planMode": "rgb(58,90,124)",
+    "bashBorder": "rgb(58,90,124)",
+    "ide": "rgb(58,90,124)",
+    "background": "rgb(58,90,124)",
+    "fastMode": "rgb(132,96,16)",
+    "fastModeShimmer": "rgb(184,146,60)",
+
+    "diffAdded": "rgb(198,234,200)",
+    "diffAddedDimmed": "rgb(228,244,228)",
+    "diffAddedWord": "rgb(160,216,164)",
+    "diffRemoved": "rgb(254,206,202)",
+    "diffRemovedDimmed": "rgb(254,232,230)",
+    "diffRemovedWord": "rgb(248,176,170)",
+
+    "bashMessageBackgroundColor": "rgb(242,236,226)",
+    "memoryBackgroundColor": "rgb(242,236,226)",
+    "userMessageBackground": "rgb(246,241,232)",
+    "userMessageBackgroundHover": "rgb(240,234,222)",
+    "selectionBg": "rgb(226,214,196)"
+  }
+}

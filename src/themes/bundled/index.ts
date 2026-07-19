@@ -18,12 +18,17 @@ import { logForDebugging } from '../../utils/debug.js'
 import { loadThemeFromText } from '../loader.js'
 import type { ThemeWarning } from '../schema.js'
 import matrix from './matrix.json'
+import parchment from './parchment.json'
 import sakura from './sakura.json'
 import { registerThemeWithTraits } from '../register.js'
 
 const BUNDLED: ReadonlyArray<readonly [string, unknown]> = [
   ['matrix', matrix],
   ['sakura', sakura],
+  // The light-mode worked example. Without one, the light path — a different
+  // built-in to inherit from and a different background to validate against —
+  // would ship with no theme exercising it.
+  ['parchment', parchment],
 ]
 
 /**

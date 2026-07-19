@@ -7,9 +7,10 @@
  * "generate it, then tweak one colour" work.
  */
 
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isKnownTheme, isReservedThemeName } from '../utils/theme.js'
+import { THEME_SCHEMA_REF } from './jsonSchema.js'
 import { getThemesDir } from './loader.js'
 
 export type SaveResult =
@@ -48,7 +49,11 @@ export function serializeThemeFile(theme: {
   description?: string
   colors: Record<string, string>
 }): string {
-  const body: Record<string, unknown> = { mode: theme.mode }
+  // Points at the schema written alongside the theme files, so opening a
+  // generated theme in an editor gives completion and hover docs for every
+  // slot. First key so it is the first thing an editor reads.
+  const body: Record<string, unknown> = { $schema: THEME_SCHEMA_REF }
+  body.mode = theme.mode
   if (theme.description) {
     body.description = theme.description
   }
@@ -56,6 +61,48 @@ export function serializeThemeFile(theme: {
   body.colors = theme.colors
 
   return `${JSON.stringify(body, null, 2)}\n`
+}
+
+/**
+ * Writes an editable copy of an existing theme.
+ *
+ * The fastest way to learn the file format is to see a complete, working
+ * example with your own editor completing the slot names — which is what this
+ * produces. Copying a built-in is also the natural way to make a small tweak
+ * to one, since built-in names themselves are reserved.
+ */
+export async function exportTheme(
+  sourceName: string,
+  mode: 'dark' | 'light',
+  colors: Record<string, string>,
+): Promise<SaveResult> {
+  const name = findAvailableThemeName(`${sourceName}-copy`)
+  return saveGeneratedTheme(name, {
+    mode,
+    description: `Copied from ${sourceName}`,
+    colors,
+  })
+}
+
+/**
+ * Deletes a theme file.
+ *
+ * Only touches ~/.claude/themes; built-in themes have no file and are refused
+ * before we get here.
+ */
+export async function deleteThemeFile(name: string): Promise<SaveResult> {
+  const path = join(getThemesDir(), `${name}.json`)
+  try {
+    await rm(path)
+    return { ok: true, name, path }
+  } catch (error) {
+    return {
+      ok: false,
+      error: `Could not delete ${path}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    }
+  }
 }
 
 export async function saveGeneratedTheme(

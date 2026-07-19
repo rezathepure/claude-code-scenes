@@ -4,7 +4,7 @@ const theme = {
   type: 'local-jsx',
   name: 'theme',
   description: 'Change the theme, or create one from a description',
-  argumentHint: '[create <description>]',
+  argumentHint: '[create <description> | export <name> | delete <name>]',
   load: () => import('./theme.js'),
 } satisfies Command
 
