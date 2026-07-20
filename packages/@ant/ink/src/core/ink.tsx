@@ -8,7 +8,9 @@ import { ConcurrentRoot } from 'react-reconciler/constants.js';
 import { onExit } from 'signal-exit';
 import { getYogaCounters } from './yoga-layout/index.js';
 import { format } from 'util';
+import type { AnsiCode } from '@alcalzone/ansi-tokenize';
 import { colorize } from './colorize.js';
+import { SCENE_STYLE_MARKER, type SceneModel, ScenePass } from './scene-pass.js';
 import App from '../components/App.js';
 import type { CursorDeclaration, CursorDeclarationSetter } from '../components/CursorDeclarationContext.js';
 import { FRAME_INTERVAL_MS } from './constants.js';
@@ -215,6 +217,7 @@ export default class Ink {
   // one full-render frame; steady-state frames after clear it and regain
   // the blit + narrow-damage fast path.
   private prevFrameContaminated = false;
+  private scenePass = new ScenePass();
   // Set by handleResize: prepend ERASE_SCREEN to the next onRender's patches
   // INSIDE the BSU/ESU block so clear+paint is atomic. Writing ERASE_SCREEN
   // synchronously in handleResize would leave the screen blank for the ~80ms
@@ -536,6 +539,15 @@ export default class Ink {
       prevFrameContaminated: this.prevFrameContaminated,
     });
     const rendererMs = performance.now() - renderStart;
+
+    // Scene pass: paint the theme's animated background into cells the tree
+    // left empty (and sweep out last frame's glyphs, wherever blit or scroll
+    // moved them). Runs before the selection/search overlays so selection
+    // styling wins visually; scene cells are noSelect so they never appear
+    // in copied text. Alt-screen only, like the overlays.
+    if (this.altScreenActive && this.scenePass.active) {
+      this.scenePass.apply(frame.screen);
+    }
 
     // Sticky/auto-follow scrolled the ScrollBox this frame. Translate the
     // selection by the same delta so the highlight stays anchored to the
@@ -1243,6 +1255,48 @@ export default class Ink {
    * frame; the effect fires before any mouse input so the fallback is
    * unobservable in practice.
    */
+  /**
+   * Install (or with null, remove) the animated background scene model.
+   * Triggers an immediate frame so a new scene first-paints without waiting
+   * for the ticker, and a removed one gets its final erasing sweep.
+   */
+  setSceneModel(model: SceneModel | null): void {
+    this.scenePass.setModel(model);
+    if (!this.isUnmounted && !this.isPaused) {
+      this.onRender();
+    }
+  }
+
+  /**
+   * Intern a foreground style for scene glyphs and register it with the
+   * scene pass. The SCENE_STYLE_MARKER makes the returned styleId unique to
+   * the scene — no real text can ever produce it, which is what lets the
+   * sweep erase scene cells by styleId alone (see scene-pass.ts).
+   *
+   * Same NUL-sentinel trick as setSelectionBgColor below: colorize() applies
+   * the tmux/xterm.js color-level clamps, so scene colors degrade exactly
+   * like every other themed color. An unparseable color falls back to the
+   * terminal's default foreground (marker-only style, still unique).
+   */
+  internSceneStyle(color: string): number {
+    const wrapped = colorize('\0', color, 'foreground');
+    const nul = wrapped.indexOf('\0');
+    const codes: AnsiCode[] =
+      nul <= 0 || nul === wrapped.length - 1
+        ? [SCENE_STYLE_MARKER]
+        : [
+            {
+              type: 'ansi',
+              code: wrapped.slice(0, nul),
+              endCode: wrapped.slice(nul + 1),
+            },
+            SCENE_STYLE_MARKER,
+          ];
+    const styleId = this.stylePool.intern(codes);
+    this.scenePass.markSceneStyle(styleId);
+    return styleId;
+  }
+
   setSelectionBgColor(color: string): void {
     // Wrap a NUL marker, then split on it to extract the open/close SGR.
     // colorize returns the input unchanged if the color string is bad —
