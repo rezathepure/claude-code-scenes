@@ -1,3 +1,4 @@
+import { feature } from 'bun:bundle';
 import React from 'react';
 import { FpsMetricsProvider } from '../context/fpsMetrics.js';
 import { StatsProvider, type StatsStore } from '../context/stats.js';
@@ -6,6 +7,7 @@ import { onChangeAppState } from '../state/onChangeAppState.js';
 import type { FpsMetrics } from '../utils/fpsTracker.js';
 import { ThemeProvider } from '@anthropic/ink';
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js';
+import { SceneBridge } from './SceneBridge.js';
 
 type Props = {
   getFpsMetrics: () => FpsMetrics | undefined;
@@ -27,6 +29,7 @@ export function App({ getFpsMetrics, stats, initialState, children }: Props): Re
             initialState={getGlobalConfig().theme}
             onThemeSave={setting => saveGlobalConfig(current => ({ ...current, theme: setting }))}
           >
+            {feature('SCENE_LAYER') ? <SceneBridge /> : null}
             {children}
           </ThemeProvider>
         </AppStateProvider>
