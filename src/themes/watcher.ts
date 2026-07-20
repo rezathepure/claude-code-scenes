@@ -17,7 +17,12 @@ import chokidar, { type FSWatcher } from 'chokidar'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'
 import { createSignal } from '../utils/signal.js'
-import { getThemesDir, loadUserThemes, type ThemeLoadResult } from './loader.js'
+import {
+  getCcThemesDir,
+  getOfficialThemesDir,
+  loadUserThemes,
+  type ThemeLoadResult,
+} from './loader.js'
 
 /** Matches the keybindings watcher, for the same editor-write reasons. */
 const FILE_STABILITY_THRESHOLD_MS = 500
@@ -63,31 +68,36 @@ function scheduleReload(): void {
 }
 
 /**
- * Starts watching the themes directory, if it exists.
- *
- * A missing directory is the common case (most users have no custom themes)
- * and is not watched — creating one later needs a restart, which is a fair
- * trade for not holding a watch on a path that usually does not exist.
+ * Starts watching both theme directories — ours (~/.claude/cc-themes, always
+ * created by migrateLegacyThemes before this runs) and official's
+ * (~/.claude/themes, watched so an edit made through official Claude Code
+ * shows up here live too). Directories that don't exist are skipped; noticing
+ * a later-created one needs a restart, a fair trade for not watching paths
+ * that usually don't exist.
  */
 export async function initializeThemeWatcher(): Promise<void> {
   if (initialized || disposed) return
 
-  const dir = getThemesDir()
-  try {
-    const stats = await stat(dir)
-    if (!stats.isDirectory()) {
-      logForDebugging(`[themes] Not watching: ${dir} is not a directory`)
-      return
+  const candidates = [getCcThemesDir(), getOfficialThemesDir()]
+  const dirs: string[] = []
+  for (const dir of candidates) {
+    try {
+      const stats = await stat(dir)
+      if (stats.isDirectory()) {
+        dirs.push(dir)
+      }
+    } catch {
+      logForDebugging(`[themes] Not watching ${dir}: does not exist`)
     }
-  } catch {
-    logForDebugging(`[themes] Not watching: ${dir} does not exist`)
+  }
+  if (dirs.length === 0) {
     return
   }
 
   initialized = true
-  logForDebugging(`[themes] Watching ${dir} for changes`)
+  logForDebugging(`[themes] Watching ${dirs.join(', ')} for changes`)
 
-  watcher = chokidar.watch(dir, {
+  watcher = chokidar.watch(dirs, {
     persistent: true,
     ignoreInitial: true,
     depth: 0,

@@ -5,6 +5,7 @@ import { ThemePicker } from '../../components/ThemePicker.js';
 import { useTheme } from '@anthropic/ink';
 import type { LocalJSXCommandCall } from '../../types/command.js';
 import { getTheme, isKnownTheme, isReservedThemeName } from '../../utils/theme.js';
+import { getThemeMeta, getThemeOrigin } from '../../themes/meta.js';
 import { unregisterThemeWithTraits } from '../../themes/register.js';
 import { deleteThemeFile, exportTheme } from '../../themes/save.js';
 import { parseThemeArgs } from './parseArgs.js';
@@ -43,10 +44,11 @@ async function handleExport(source: string, onDone: Props['onDone']): Promise<vo
   }
 
   const colors = getTheme(source) as unknown as Record<string, string>;
-  // Built-ins carry their mode in the name; runtime themes are registered with
-  // it, but the palette itself does not record it, so fall back to reading the
-  // background the theme was designed against.
-  const mode: 'dark' | 'light' = source.includes('light') ? 'light' : 'dark';
+  // Mode from the meta registry — authoritative, set at registration. The
+  // name-sniffing fallback only covers built-ins registered before meta
+  // existed (and would misjudge a dark theme named "moonlight", which is why
+  // it is no longer the primary).
+  const mode: 'dark' | 'light' = getThemeMeta(source)?.mode ?? (source.includes('light') ? 'light' : 'dark');
 
   const result = await exportTheme(source, mode, colors);
   onDone(
@@ -57,7 +59,7 @@ async function handleExport(source: string, onDone: Props['onDone']): Promise<vo
   );
 }
 
-/** Deletes a user theme file. */
+/** Deletes a user theme file — but only one of OURS. */
 async function handleDelete(name: string, onDone: Props['onDone']): Promise<void> {
   if (isReservedThemeName(name)) {
     onDone(`“${name}” is built in and cannot be deleted.`, { display: 'system' });
@@ -66,6 +68,23 @@ async function handleDelete(name: string, onDone: Props['onDone']): Promise<void
   if (!isKnownTheme(name)) {
     onDone(`No theme called “${name}”.`, { display: 'system' });
     return;
+  }
+
+  switch (getThemeOrigin(name)) {
+    case 'bundled':
+      onDone(
+        `“${name}” ships with cc-themes and cannot be deleted. Run /theme export ${name} to make an editable copy.`,
+        { display: 'system' },
+      );
+      return;
+    case 'official':
+      onDone(
+        `“${name}” is managed by official Claude Code in ~/.claude/themes — delete it there, or run /theme export ${name} to copy it into ~/.claude/cc-themes as an editable cc theme.`,
+        { display: 'system' },
+      );
+      return;
+    default:
+      break;
   }
 
   const result = await deleteThemeFile(name);

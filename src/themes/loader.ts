@@ -32,9 +32,11 @@ import {
 } from './register.js'
 import {
   findDuplicateSlotKeys,
+  isOurThemeShape,
   parseThemeFile,
   type ThemeFile,
   type ThemeWarning,
+  translateOfficialTheme,
 } from './schema.js'
 import { describeIssue, validateThemeColors } from './validate.js'
 
@@ -46,6 +48,8 @@ export type LoadedTheme = {
   theme: Theme
   /** Animated background config; params complete (defaults filled by parse). */
   scene?: SceneConfig
+  /** Which directory (or bundle) the theme came from. Drives delete/export policy and picker grouping. */
+  origin: 'cc' | 'official' | 'bundled'
 }
 
 export type ThemeLoadResult = {
@@ -53,8 +57,21 @@ export type ThemeLoadResult = {
   warnings: ThemeWarning[]
 }
 
-export function getThemesDir(): string {
+/**
+ * The directory OFFICIAL Claude Code reads for its custom themes. We scan it
+ * read-only, importing official-format files; we never write here.
+ */
+export function getOfficialThemesDir(): string {
   return join(getClaudeConfigHomeDir(), 'themes')
+}
+
+/**
+ * Our directory: everything this fork writes (generated themes, exports, the
+ * editor-autocomplete schema) lives here, so official's picker never sees our
+ * internals and vice versa. Created at startup by migrateLegacyThemes.
+ */
+export function getCcThemesDir(): string {
+  return join(getClaudeConfigHomeDir(), 'cc-themes')
 }
 
 /**
@@ -71,15 +88,45 @@ export function resolveThemeColors(file: ThemeFile): Record<string, string> {
   return { ...base, ...file.colors }
 }
 
-/**
- * Loads and registers one theme from raw file text.
- *
- * Exported for tests and for the file watcher, which reloads a single file
- * rather than rescanning the directory.
- */
+/** Resolve, validate and assemble a parsed ThemeFile into a LoadedTheme. */
+function assembleLoadedTheme(
+  name: string,
+  parsed: ThemeFile,
+  origin: LoadedTheme['origin'],
+  warnings: ThemeWarning[],
+): LoadedTheme {
+  const resolved = resolveThemeColors(parsed)
+  const { colors, issues } = validateThemeColors(resolved, parsed.mode)
+
+  for (const issue of issues) {
+    warnings.push({
+      type: 'colour_issue',
+      // Repairs are informational: the theme still works, it was just nudged.
+      severity: issue.kind === 'repaired-contrast' ? 'warning' : 'error',
+      theme: name,
+      message: describeIssue(issue),
+    })
+  }
+
+  const loaded: LoadedTheme = {
+    name,
+    mode: parsed.mode,
+    theme: colors as unknown as Theme,
+    origin,
+  }
+  if (parsed.description !== undefined) {
+    loaded.description = parsed.description
+  }
+  if (parsed.scene !== undefined) {
+    loaded.scene = parsed.scene
+  }
+  return loaded
+}
+
 export function loadThemeFromText(
   name: string,
   text: string,
+  origin: LoadedTheme['origin'] = 'cc',
 ): { theme: LoadedTheme | null; warnings: ThemeWarning[] } {
   const warnings: ThemeWarning[] = []
 
@@ -115,32 +162,60 @@ export function loadThemeFromText(
     return { theme: null, warnings }
   }
 
-  const resolved = resolveThemeColors(parsed.theme)
-  const { colors, issues } = validateThemeColors(resolved, parsed.theme.mode)
+  return {
+    theme: assembleLoadedTheme(name, parsed.theme, origin, warnings),
+    warnings,
+  }
+}
 
-  for (const issue of issues) {
+/**
+ * Loads a theme written in OFFICIAL Claude Code's format
+ * ({ name, base, overrides }) from the shared ~/.claude/themes directory.
+ *
+ * Returns theme:null with NO warnings when the JSON is simply not
+ * official-shaped — that directory is official's, and policing its contents
+ * is not our job. Skips findDuplicateSlotKeys, whose regex targets a
+ * `"colors"` block that official files do not have.
+ */
+export function loadOfficialThemeFromText(
+  name: string,
+  text: string,
+): { theme: LoadedTheme | null; warnings: ThemeWarning[] } {
+  const warnings: ThemeWarning[] = []
+
+  if (isReservedThemeName(name)) {
     warnings.push({
-      type: 'colour_issue',
-      // Repairs are informational: the theme still works, it was just nudged.
-      severity: issue.kind === 'repaired-contrast' ? 'warning' : 'error',
+      type: 'reserved_name',
+      severity: 'error',
       theme: name,
-      message: describeIssue(issue),
+      message: `"${name}" is a built-in theme name and cannot be replaced.`,
+      suggestion: `Rename the file to something else, for example "${name}-custom.json".`,
     })
+    return { theme: null, warnings }
   }
 
-  const loaded: LoadedTheme = {
-    name,
-    mode: parsed.theme.mode,
-    theme: colors as unknown as Theme,
-  }
-  if (parsed.theme.description !== undefined) {
-    loaded.description = parsed.theme.description
-  }
-  if (parsed.theme.scene !== undefined) {
-    loaded.scene = parsed.theme.scene
+  let raw: unknown
+  try {
+    raw = jsonParse(text)
+  } catch {
+    return { theme: null, warnings }
   }
 
-  return { theme: loaded, warnings }
+  const translated = translateOfficialTheme(raw)
+  if (translated === null) {
+    return { theme: null, warnings }
+  }
+
+  const parsed = parseThemeFile(translated, name)
+  warnings.push(...parsed.warnings)
+  if (!parsed.ok) {
+    return { theme: null, warnings }
+  }
+
+  return {
+    theme: assembleLoadedTheme(name, parsed.theme, 'official', warnings),
+    warnings,
+  }
 }
 
 /** Theme names this module has registered, so reloads can drop stale ones. */
@@ -167,76 +242,134 @@ export function getCachedThemeWarnings(): ThemeWarning[] {
  * exist are unregistered first, so a deleted file actually disappears.
  */
 export async function loadUserThemes(): Promise<ThemeLoadResult> {
-  const dir = getThemesDir()
   const warnings: ThemeWarning[] = []
-  const themes: LoadedTheme[] = []
+  // Name-keyed so a cc theme shadows a same-named official one with a single
+  // picker entry, not a duplicate. Official is scanned first; cc overwrites.
+  const byName = new Map<string, LoadedTheme>()
 
-  let entries: string[]
+  // ── The shared official directory: read-only import ──
+  const officialDir = getOfficialThemesDir()
+  let officialEntries: string[] = []
   try {
-    entries = await readdir(dir)
+    officialEntries = await readdir(officialDir)
   } catch (error) {
-    // Cleared on every exit path, so a fixed or deleted file stops being
-    // reported the next time round.
-    cachedWarnings = []
-    if (isENOENT(error)) {
-      // No themes directory is the normal case, not a problem.
-      return { themes: [], warnings: [] }
+    if (!isENOENT(error)) {
+      logForDebugging(
+        `[themes] Cannot read ${officialDir}: ${errorMessage(error)}`,
+        { level: 'warn' },
+      )
     }
-    logForDebugging(`[themes] Cannot read ${dir}: ${errorMessage(error)}`, {
-      level: 'warn',
-    })
-    return { themes: [], warnings: [] }
   }
-
-  // Keep the schema current so editors can complete slot names. Written on
-  // every load rather than once, so it tracks slots added by an upgrade.
-  void writeThemeJsonSchema(dir)
-
-  const files = entries
+  for (const file of officialEntries
     .filter(e => e.endsWith('.json') && e !== THEME_SCHEMA_FILENAME)
-    .sort()
-
-  for (const file of files) {
+    .sort()) {
     const name = file.slice(0, -'.json'.length)
     let text: string
     try {
-      text = await readFile(join(dir, file), 'utf-8')
-    } catch (error) {
-      if (!isENOENT(error)) {
-        warnings.push({
-          type: 'parse_error',
-          severity: 'error',
-          theme: name,
-          message: `Could not read ${file}: ${errorMessage(error)}`,
-        })
-      }
+      text = await readFile(join(officialDir, file), 'utf-8')
+    } catch {
       continue
     }
 
-    const { theme, warnings: fileWarnings } = loadThemeFromText(name, text)
-    warnings.push(...fileWarnings)
-    if (theme) {
-      themes.push(theme)
+    let raw: unknown
+    try {
+      raw = jsonParse(text)
+    } catch {
+      // Not valid JSON — official's directory, not ours to police.
+      continue
+    }
+
+    if (isOurThemeShape(raw)) {
+      // A stray of OURS the migration could not move (collision, read-only
+      // fs). Load it in place; origin is the directory it lives in, so the
+      // delete-refusal message stays literally true.
+      logForDebugging(
+        `[themes] ${file} in ${officialDir} is a cc-themes file — it belongs in ${getCcThemesDir()}`,
+      )
+      const { theme, warnings: w } = loadThemeFromText(name, text, 'official')
+      warnings.push(...w)
+      if (theme) byName.set(theme.name, theme)
+      continue
+    }
+
+    const { theme, warnings: w } = loadOfficialThemeFromText(name, text)
+    warnings.push(...w)
+    if (theme) byName.set(theme.name, theme)
+  }
+
+  // ── Our directory ──
+  const ccDir = getCcThemesDir()
+  let ccEntries: string[] | null = null
+  try {
+    ccEntries = await readdir(ccDir)
+  } catch (error) {
+    if (!isENOENT(error)) {
+      logForDebugging(`[themes] Cannot read ${ccDir}: ${errorMessage(error)}`, {
+        level: 'warn',
+      })
+    }
+  }
+  if (ccEntries !== null) {
+    // Keep the schema current so editors can complete slot names. Written on
+    // every load rather than once, so it tracks slots added by an upgrade —
+    // and only ever into OUR directory.
+    void writeThemeJsonSchema(ccDir)
+
+    for (const file of ccEntries
+      .filter(e => e.endsWith('.json') && e !== THEME_SCHEMA_FILENAME)
+      .sort()) {
+      const name = file.slice(0, -'.json'.length)
+      let text: string
+      try {
+        text = await readFile(join(ccDir, file), 'utf-8')
+      } catch (error) {
+        if (!isENOENT(error)) {
+          warnings.push({
+            type: 'parse_error',
+            severity: 'error',
+            theme: name,
+            message: `Could not read ${file}: ${errorMessage(error)}`,
+          })
+        }
+        continue
+      }
+
+      const { theme, warnings: fileWarnings } = loadThemeFromText(
+        name,
+        text,
+        'cc',
+      )
+      warnings.push(...fileWarnings)
+      if (theme) {
+        if (byName.has(theme.name)) {
+          logForDebugging(
+            `[themes] ${theme.name} in ${ccDir} shadows the copy in ${officialDir}`,
+          )
+        }
+        byName.set(theme.name, theme)
+      }
     }
   }
 
+  const themes = [...byName.values()]
+
   // Drop anything we registered before that has since gone away.
-  const nowPresent = new Set(themes.map(t => t.name))
   for (const previous of registeredNames) {
-    if (!nowPresent.has(previous)) {
+    if (!byName.has(previous)) {
       unregisterThemeWithTraits(previous)
     }
   }
 
   for (const t of themes) {
-    registerThemeWithTraits(t.name, t.theme, t.mode, t.scene)
+    registerThemeWithTraits(t.name, t.theme, t.mode, t.scene, {
+      origin: t.origin,
+      description: t.description,
+    })
   }
   registeredNames = themes.map(t => t.name)
 
   if (themes.length > 0) {
-    logForDebugging(
-      `[themes] Loaded ${themes.length} user theme(s) from ${dir}`,
-    )
+    logForDebugging(`[themes] Loaded ${themes.length} user theme(s)`)
   }
 
   cachedWarnings = warnings

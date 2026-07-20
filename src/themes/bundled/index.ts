@@ -53,6 +53,7 @@ export function registerBundledThemes(): ThemeWarning[] {
         result.theme.theme,
         result.theme.mode,
         result.theme.scene,
+        { origin: 'bundled', description: result.theme.description },
       )
     }
   }

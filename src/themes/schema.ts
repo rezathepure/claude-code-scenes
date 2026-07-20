@@ -105,6 +105,39 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+/**
+ * True when parsed JSON is a theme in OUR format — the minimum bar
+ * parseThemeFile itself requires (valid mode + a colors object). Used by the
+ * migration to decide which files in the shared ~/.claude/themes directory
+ * are ours to move, so it must not be looser than the parser.
+ */
+export function isOurThemeShape(raw: unknown): boolean {
+  return (
+    isPlainObject(raw) &&
+    (raw.mode === 'dark' || raw.mode === 'light') &&
+    isPlainObject(raw.colors)
+  )
+}
+
+/**
+ * Translates a theme in OFFICIAL Claude Code's custom-theme format —
+ * `{ name, base: 'dark'|'light', overrides: {slot: colour} }`, verified
+ * against real files official's own picker accepts — into our shape, or
+ * returns null when the JSON is not official-shaped.
+ *
+ * The `name` field is deliberately ignored: in this fork the filename is the
+ * theme name, and honouring an embedded name would reintroduce the exact
+ * file-disagrees-with-itself confusion that convention exists to prevent.
+ */
+export function translateOfficialTheme(
+  raw: unknown,
+): Record<string, unknown> | null {
+  if (!isPlainObject(raw)) return null
+  if (raw.base !== 'dark' && raw.base !== 'light') return null
+  if (!isPlainObject(raw.overrides)) return null
+  return { mode: raw.base, colors: raw.overrides }
+}
+
 type ClampTable = Record<string, { default: number; min: number; max: number }>
 
 /**

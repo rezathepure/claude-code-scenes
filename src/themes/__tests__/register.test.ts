@@ -103,3 +103,43 @@ describe('the bundled themes are classified correctly', () => {
     })
   }
 })
+
+describe('theme meta lifecycle', () => {
+  test('register sets origin and authoritative mode; unregister clears', async () => {
+    const { getThemeMeta, getThemeOrigin } = await import('../meta.js')
+
+    registerThemeWithTraits(
+      'test-only-meta',
+      getTheme('dark'),
+      'dark',
+      undefined,
+      {
+        origin: 'official',
+        description: 'imported',
+      },
+    )
+    registered.push('test-only-meta')
+
+    expect(getThemeMeta('test-only-meta')).toEqual({
+      origin: 'official',
+      mode: 'dark',
+      description: 'imported',
+    })
+
+    unregisterThemeWithTraits('test-only-meta')
+    registered.pop()
+    expect(getThemeMeta('test-only-meta')).toBeUndefined()
+    // Fallbacks after clearing: builtins are builtin, unknowns default to cc.
+    expect(getThemeOrigin('dark')).toBe('builtin')
+    expect(getThemeOrigin('test-only-meta')).toBe('cc')
+  })
+
+  test('meta defaults to origin cc when not passed', async () => {
+    const { getThemeOrigin } = await import('../meta.js')
+    registerThemeWithTraits('test-only-defaulted', getTheme('dark'), 'light')
+    registered.push('test-only-defaulted')
+    expect(getThemeOrigin('test-only-defaulted')).toBe('cc')
+    const { getThemeMeta } = await import('../meta.js')
+    expect(getThemeMeta('test-only-defaulted')?.mode).toBe('light')
+  })
+})

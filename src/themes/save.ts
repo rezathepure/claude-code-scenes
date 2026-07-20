@@ -13,7 +13,7 @@ import { getSceneConfig } from '../scene/registry.js'
 import type { SceneConfig } from '../scene/types.js'
 import { isKnownTheme, isReservedThemeName } from '../utils/theme.js'
 import { THEME_SCHEMA_REF } from './jsonSchema.js'
-import { getThemesDir } from './loader.js'
+import { getCcThemesDir } from './loader.js'
 
 export type SaveResult =
   | { ok: true; name: string; path: string }
@@ -97,7 +97,7 @@ export async function exportTheme(
  * before we get here.
  */
 export async function deleteThemeFile(name: string): Promise<SaveResult> {
-  const path = join(getThemesDir(), `${name}.json`)
+  const path = join(getCcThemesDir(), `${name}.json`)
   try {
     await rm(path)
     return { ok: true, name, path }
@@ -120,7 +120,7 @@ export async function saveGeneratedTheme(
     scene?: SceneConfig
   },
 ): Promise<SaveResult> {
-  const dir = getThemesDir()
+  const dir = getCcThemesDir()
   const path = join(dir, `${name}.json`)
 
   try {

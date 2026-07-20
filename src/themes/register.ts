@@ -21,6 +21,12 @@
 
 import { registerThemeTraits, unregisterThemeTraits } from 'color-diff-napi'
 import { registerScene, unregisterScene } from '../scene/registry.js'
+import {
+  deleteThemeMeta,
+  setThemeMeta,
+  type ThemeMeta,
+  type ThemeOrigin,
+} from './meta.js'
 import type { SceneConfig } from '../scene/types.js'
 import { isTerminalPaletteColor } from '../utils/color.js'
 import { registerTheme, type Theme, unregisterTheme } from '../utils/theme.js'
@@ -51,6 +57,7 @@ export function registerThemeWithTraits(
   theme: Theme,
   mode: ThemeMode,
   scene?: SceneConfig,
+  meta?: { origin: ThemeOrigin; description?: string },
 ): void {
   registerTheme(name, theme)
   registerThemeTraits(name, {
@@ -64,11 +71,19 @@ export function registerThemeWithTraits(
   // (ink cannot import src/), and registering it anywhere else would recreate
   // the palette/traits drift this module exists to prevent.
   registerScene(name, scene ?? { kind: 'none' })
+  // Fourth registry, same choke point: origin drives delete/export policy and
+  // picker grouping, and mode here is authoritative (no name-guessing).
+  const themeMeta: ThemeMeta = { origin: meta?.origin ?? 'cc', mode }
+  if (meta?.description !== undefined) {
+    themeMeta.description = meta.description
+  }
+  setThemeMeta(name, themeMeta)
 }
 
-/** Removes a theme from all three registries. */
+/** Removes a theme from all four registries. */
 export function unregisterThemeWithTraits(name: string): void {
   unregisterTheme(name)
   unregisterThemeTraits(name)
   unregisterScene(name)
+  deleteThemeMeta(name)
 }

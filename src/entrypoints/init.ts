@@ -59,6 +59,7 @@ import { initLangfuse, shutdownLangfuse } from '../services/langfuse/index.js'
 import { setThemeConfigCallbacks, validateThemeSetting } from '@anthropic/ink'
 import { registerBundledThemes } from '../themes/bundled/index.js'
 import { loadUserThemes } from '../themes/loader.js'
+import { migrateLegacyThemes } from '../themes/migrate.js'
 import { initializeThemeWatcher } from '../themes/watcher.js'
 
 // initialize1PEventLogging is dynamically imported to defer OpenTelemetry sdk-logs/resources
@@ -79,6 +80,10 @@ export const init = memoize(async (): Promise<void> => {
     // preference, or validateThemeSetting below would report every user theme
     // as missing and quietly reset the user's choice to dark.
     registerBundledThemes()
+    // Move our theme files out of the directory official Claude Code also
+    // reads — must run before the watcher starts, or our own renames would
+    // trigger reload churn.
+    await migrateLegacyThemes()
     const { warnings: themeWarnings } = await loadUserThemes()
     for (const warning of themeWarnings) {
       logForDebugging(`[themes] ${warning.theme}: ${warning.message}`, {

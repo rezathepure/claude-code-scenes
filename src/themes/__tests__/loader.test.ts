@@ -325,3 +325,52 @@ describe('load warnings are cached for the UI', () => {
     expect(getCachedThemeWarnings().length).toBe(first)
   })
 })
+
+describe('official-format detection and translation', () => {
+  test('isOurThemeShape matches exactly the parser minimum', async () => {
+    const { isOurThemeShape } = await import('../schema.js')
+    expect(isOurThemeShape({ mode: 'dark', colors: {} })).toBe(true)
+    expect(isOurThemeShape({ mode: 'sepia', colors: {} })).toBe(false)
+    expect(isOurThemeShape({ mode: 'dark' })).toBe(false)
+    expect(isOurThemeShape({ name: 'x', base: 'dark', overrides: {} })).toBe(
+      false,
+    )
+    expect(isOurThemeShape(null)).toBe(false)
+  })
+
+  test('translateOfficialTheme maps base/overrides and ignores name', async () => {
+    const { translateOfficialTheme } = await import('../schema.js')
+    expect(
+      translateOfficialTheme({
+        name: 'whatever',
+        base: 'light',
+        overrides: { claude: 'rgb(1,2,3)' },
+      }),
+    ).toEqual({ mode: 'light', colors: { claude: 'rgb(1,2,3)' } })
+    expect(translateOfficialTheme({ base: 'sepia', overrides: {} })).toBeNull()
+    expect(translateOfficialTheme({ mode: 'dark', colors: {} })).toBeNull()
+    expect(translateOfficialTheme('nope')).toBeNull()
+  })
+
+  test('loadOfficialThemeFromText is silent about non-official JSON', async () => {
+    const { loadOfficialThemeFromText } = await import('../loader.js')
+    // Not our directory: junk yields null with NO warnings.
+    expect(loadOfficialThemeFromText('x', '{ not json')).toEqual({
+      theme: null,
+      warnings: [],
+    })
+    expect(
+      loadOfficialThemeFromText('x', JSON.stringify({ some: 'config' })),
+    ).toEqual({ theme: null, warnings: [] })
+  })
+
+  test('loadOfficialThemeFromText refuses reserved filenames', async () => {
+    const { loadOfficialThemeFromText } = await import('../loader.js')
+    const { theme, warnings } = loadOfficialThemeFromText(
+      'dark',
+      JSON.stringify({ base: 'dark', overrides: {} }),
+    )
+    expect(theme).toBeNull()
+    expect(warnings[0]).toMatchObject({ type: 'reserved_name' })
+  })
+})
