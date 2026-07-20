@@ -48,7 +48,12 @@ export function registerBundledThemes(): ThemeWarning[] {
     warnings.push(...result.warnings)
 
     if (result.theme) {
-      registerThemeWithTraits(name, result.theme.theme, result.theme.mode)
+      registerThemeWithTraits(
+        name,
+        result.theme.theme,
+        result.theme.mode,
+        result.theme.scene,
+      )
     }
   }
 

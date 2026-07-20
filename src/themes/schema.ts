@@ -13,6 +13,13 @@
  */
 
 import { z } from 'zod/v4'
+import {
+  PETALS_CLAMPS,
+  type PetalsParams,
+  RAIN_CLAMPS,
+  type RainParams,
+  type SceneConfig,
+} from '../scene/types.js'
 import { lazySchema } from '../utils/lazySchema.js'
 import { getTheme } from '../utils/theme.js'
 
@@ -28,15 +35,17 @@ export type ThemeFile = {
   description?: string
   author?: string
   /**
-   * Reserved for the animated background layer.
+   * The animated background: a primitive NAME plus bounded NUMBERS, never
+   * code — that is what keeps theme files safe to share. Params are optional
+   * in the file; parsing fills defaults and clamps out-of-range values with
+   * a warning, so downstream always sees a complete, sane config.
    *
-   * Declared now, always `none` for the moment, so that theme files written
-   * today do not need migrating when scene primitives arrive. The model will
-   * only ever choose from a fixed set of named primitives and fill in their
-   * parameters — it never emits code, which is what keeps theme files safe to
-   * share.
+   * Parsed unconditionally (it is inert data); whether anything ANIMATES is
+   * gated at the activation point behind feature('SCENE_LAYER'), the same
+   * split AUTO_THEME uses ('auto' is always a valid stored value — the flag
+   * gates the watcher and picker option, not the config format).
    */
-  scene?: { kind: 'none' }
+  scene?: SceneConfig
 }
 
 export type ThemeWarningType =
@@ -76,12 +85,146 @@ export const ThemeFileSchema = lazySchema(() =>
     description: z.string().optional(),
     author: z.string().optional(),
     colors: z.record(z.string(), z.string()),
-    scene: z.object({ kind: z.literal('none') }).optional(),
+    scene: z
+      .union([
+        z.object({ kind: z.literal('none') }),
+        z.object({
+          kind: z.literal('rain'),
+          params: z.record(z.string(), z.number()).optional(),
+        }),
+        z.object({
+          kind: z.literal('petals'),
+          params: z.record(z.string(), z.number()).optional(),
+        }),
+      ])
+      .optional(),
   }),
 )
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+type ClampTable = Record<string, { default: number; min: number; max: number }>
+
+/**
+ * Resolves a scene's params against its clamp table: missing → default,
+ * non-numeric → default + warning, out of range → clamped + warning, unknown
+ * → dropped + warning. The theme always loads; only the value bends.
+ */
+function clampSceneParams(
+  raw: unknown,
+  clamps: ClampTable,
+  kind: string,
+  themeName: string,
+  warnings: ThemeWarning[],
+): Record<string, number> {
+  const out: Record<string, number> = {}
+  const source = isPlainObject(raw) ? raw : {}
+
+  for (const [key, spec] of Object.entries(clamps)) {
+    const value = source[key]
+    if (value === undefined) {
+      out[key] = spec.default
+      continue
+    }
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      warnings.push({
+        type: 'invalid_field',
+        severity: 'warning',
+        theme: themeName,
+        message: `Scene param "${kind}.${key}" must be a number; using the default (${spec.default}).`,
+      })
+      out[key] = spec.default
+      continue
+    }
+    if (value < spec.min || value > spec.max) {
+      const clamped = Math.min(spec.max, Math.max(spec.min, value))
+      warnings.push({
+        type: 'invalid_field',
+        severity: 'warning',
+        theme: themeName,
+        message: `Scene param "${kind}.${key}" is out of range [${spec.min}–${spec.max}]; clamped ${value} to ${clamped}.`,
+      })
+      out[key] = clamped
+      continue
+    }
+    out[key] = value
+  }
+
+  for (const key of Object.keys(source)) {
+    if (!(key in clamps)) {
+      warnings.push({
+        type: 'invalid_field',
+        severity: 'warning',
+        theme: themeName,
+        message: `Unknown scene param "${kind}.${key}". Ignoring it.`,
+      })
+    }
+  }
+
+  return out
+}
+
+/**
+ * Parses the optional `scene` field. Unknown kinds warn and yield undefined
+ * (forward compatibility: a theme written for a newer build still loads, just
+ * without its animation).
+ */
+function parseSceneConfig(
+  raw: unknown,
+  themeName: string,
+  warnings: ThemeWarning[],
+): SceneConfig | undefined {
+  if (raw === undefined) return undefined
+  if (!isPlainObject(raw)) {
+    warnings.push({
+      type: 'invalid_field',
+      severity: 'warning',
+      theme: themeName,
+      message:
+        '"scene" must be an object like { "kind": "rain" }. Ignoring it.',
+    })
+    return undefined
+  }
+
+  switch (raw.kind) {
+    case 'none':
+      return { kind: 'none' }
+    case 'rain':
+      // clampSceneParams emits exactly the clamp table's keys, so the
+      // record is a complete RainParams by construction.
+      return {
+        kind: 'rain',
+        params: clampSceneParams(
+          raw.params,
+          RAIN_CLAMPS,
+          'rain',
+          themeName,
+          warnings,
+        ) as unknown as RainParams,
+      }
+    case 'petals':
+      return {
+        kind: 'petals',
+        params: clampSceneParams(
+          raw.params,
+          PETALS_CLAMPS,
+          'petals',
+          themeName,
+          warnings,
+        ) as unknown as PetalsParams,
+      }
+    default:
+      warnings.push({
+        type: 'invalid_field',
+        severity: 'warning',
+        theme: themeName,
+        message: `Unsupported scene kind ${JSON.stringify(raw.kind)}. Ignoring it.`,
+        suggestion: 'Available scenes: "none", "rain", "petals".',
+      })
+      return undefined
+  }
 }
 
 export type ParseOutcome =
@@ -173,19 +316,9 @@ export function parseThemeFile(raw: unknown, themeName: string): ParseOutcome {
     theme.author = raw.author
   }
 
-  if (isPlainObject(raw.scene)) {
-    if (raw.scene.kind === 'none') {
-      theme.scene = { kind: 'none' }
-    } else {
-      warnings.push({
-        type: 'invalid_field',
-        severity: 'warning',
-        theme: themeName,
-        message: `Unsupported scene kind ${JSON.stringify(raw.scene.kind)}. Ignoring it.`,
-        suggestion:
-          'Animated scenes are not implemented yet; only { "kind": "none" } is accepted.',
-      })
-    }
+  const scene = parseSceneConfig(raw.scene, themeName, warnings)
+  if (scene !== undefined) {
+    theme.scene = scene
   }
 
   return { ok: true, theme, warnings }

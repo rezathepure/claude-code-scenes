@@ -239,6 +239,7 @@ export type GlobalConfig = {
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
   showTurnDuration: boolean // Controls whether to show turn duration message (e.g., "Cooked for 1m 6s")
+  sceneAnimationsEnabled: boolean // Animated theme background scenes (rain, petals)
   /**
    * @deprecated Use settings.env instead.
    */
@@ -601,6 +602,7 @@ function createDefaultGlobalConfig(): GlobalConfig {
     editorMode: 'normal',
     autoCompactEnabled: true,
     showTurnDuration: true,
+    sceneAnimationsEnabled: true,
     hasSeenTasksHint: false,
     hasUsedStash: false,
     hasUsedBackgroundTask: false,
@@ -645,6 +647,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'hasUsedBackslashReturn',
   'autoCompactEnabled',
   'showTurnDuration',
+  'sceneAnimationsEnabled',
   'diffTool',
   'env',
   'tipsHistory',

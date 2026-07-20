@@ -5,6 +5,8 @@ import {
   registerBundledThemes,
 } from '../bundled/index.js'
 import { parseColor } from '../../utils/color.js'
+import { getSceneConfig } from '../../scene/registry.js'
+import { defaultRainParams } from '../../scene/types.js'
 
 describe('bundled themes', () => {
   const warnings = registerBundledThemes()
@@ -72,5 +74,21 @@ describe('bundled themes', () => {
       expect(theme.claudeShimmer).not.toBe(dark.claudeShimmer)
       expect(theme.promptBorderShimmer).not.toBe(dark.promptBorderShimmer)
     }
+  })
+})
+
+describe('bundled scenes', () => {
+  test('matrix rains, sakura drifts, parchment stays still', () => {
+    registerBundledThemes()
+    expect(getSceneConfig('matrix').kind).toBe('rain')
+    expect(getSceneConfig('sakura').kind).toBe('petals')
+    expect(getSceneConfig('parchment').kind).toBe('none')
+  })
+
+  test('bundled scene params are complete after loading', () => {
+    registerBundledThemes()
+    const rain = getSceneConfig('matrix')
+    if (rain.kind !== 'rain') throw new Error('expected rain')
+    expect(rain.params).toEqual(defaultRainParams())
   })
 })

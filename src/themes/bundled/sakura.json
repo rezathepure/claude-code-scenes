@@ -2,7 +2,7 @@
   "mode": "dark",
   "description": "A cherry-blossom night. Sakura pink leads, honey pays the bills.",
   "author": "nova theme lab",
-  "scene": { "kind": "none" },
+  "scene": { "kind": "petals" },
   "colors": {
     "text": "rgb(250,236,244)",
     "inverseText": "rgb(28,14,31)",

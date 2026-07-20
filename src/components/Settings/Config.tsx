@@ -4,6 +4,7 @@ import { type KeyboardEvent, Box, Text, useTheme, useThemeSetting, useTerminalFo
 import * as React from 'react';
 import { useState, useCallback } from 'react';
 import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js';
+import { sceneController } from '../../scene/controller.js';
 import figures from 'figures';
 import { type GlobalConfig, saveGlobalConfig, getCurrentProjectConfig, type OutputStyle } from '../../utils/config.js';
 import { normalizeApiKeyForConfig } from '../../utils/authPortable.js';
@@ -312,6 +313,22 @@ export function Config({
         });
       },
     },
+    ...(feature('SCENE_LAYER')
+      ? [
+          {
+            id: 'sceneAnimationsEnabled',
+            label: 'Theme animations',
+            value: globalConfig.sceneAnimationsEnabled,
+            type: 'boolean' as const,
+            onChange(sceneAnimationsEnabled: boolean) {
+              saveGlobalConfig(current => ({ ...current, sceneAnimationsEnabled }));
+              setGlobalConfig({ ...getGlobalConfig(), sceneAnimationsEnabled });
+              // Apply immediately — stopping mid-scene must not need a restart.
+              sceneController.refresh();
+            },
+          },
+        ]
+      : []),
     {
       id: 'spinnerTipsEnabled',
       label: 'Show tips',

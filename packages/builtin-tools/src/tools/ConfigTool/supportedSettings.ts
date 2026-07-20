@@ -77,6 +77,11 @@ export const SUPPORTED_SETTINGS: Record<string, SettingConfig> = {
     description:
       'Show turn duration message after responses (e.g., "Cooked for 1m 6s")',
   },
+  sceneAnimationsEnabled: {
+    source: 'global',
+    type: 'boolean',
+    description: 'Animated theme background scenes (rain, petals)',
+  },
   terminalProgressBarEnabled: {
     source: 'global',
     type: 'boolean',
