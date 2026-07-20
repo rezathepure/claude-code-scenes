@@ -16,6 +16,7 @@ import { instances, type SceneModel } from '@anthropic/ink'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { getGlobalConfig } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
+import { isFullscreenActive } from '../utils/fullscreen.js'
 import { getTheme } from '../utils/theme.js'
 import { derivePetalStyles, deriveRainStyles } from './colors.js'
 import { createPetalsModel } from './petals.js'
@@ -102,7 +103,12 @@ class SceneController {
       !input.reducedMotion &&
       !this.disabledByDegrade &&
       getGlobalConfig().sceneAnimationsEnabled !== false &&
-      process.stdout.isTTY === true
+      process.stdout.isTTY === true &&
+      // Scenes are alt-screen-only (ScenePass is gated on altScreenActive):
+      // inline mode has no sky to paint and its diffs land in scrollback.
+      // Without this check the ticker would burn a no-op onRender() at 10fps
+      // for users in the default inline layout.
+      isFullscreenActive()
 
     if (!enabled) {
       this.stop()

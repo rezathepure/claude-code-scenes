@@ -11,6 +11,9 @@ import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
 import { getRegisteredThemeNames, THEME_NAMES, type ThemeSetting } from '../utils/theme.js';
 import { getCachedThemeWarnings } from '../themes/loader.js';
+import { getSceneConfig } from '../scene/registry.js';
+import { getGlobalConfig } from '../utils/config.js';
+import { isFullscreenActive } from '../utils/fullscreen.js';
 import { Select } from './CustomSelect/index.js';
 import { Byline, KeyboardShortcutHint } from '@anthropic/ink';
 import { getColorModuleUnavailableReason, getSyntaxTheme } from './StructuredDiff/colorDiff.js';
@@ -95,6 +98,26 @@ export function ThemePicker({
       value: 'light-ansi',
     },
   ];
+
+  // Why is my theme not animating? The scene layer is alt-screen-only, and
+  // external users default to the inline layout — a themed animation that
+  // silently does nothing is exactly the kind of failure this picker has
+  // learnt to explain. `theme` here is the resolved current theme, which
+  // follows the preview, so the hint appears while hovering matrix/sakura.
+  const sceneHint = React.useMemo(() => {
+    if (!feature('SCENE_LAYER')) {
+      return null;
+    }
+    const scene = getSceneConfig(theme);
+    if (scene.kind === 'none') return null;
+    if (!isFullscreenActive()) {
+      return `This theme has an animated background (${scene.kind}) — run with CLAUDE_CODE_NO_FLICKER=1 to see it (fullscreen mode)`;
+    }
+    if (getGlobalConfig().sceneAnimationsEnabled === false) {
+      return `This theme has an animated background (${scene.kind}) — enable "Theme animations" in /config to see it`;
+    }
+    return null;
+  }, [theme]);
 
   // Theme files that failed to load. Shown here because this is where someone
   // goes looking when a theme they wrote does not appear; the explanation
@@ -191,6 +214,7 @@ export function ThemePicker({
                 ? `Syntax theme: ${syntaxTheme.theme}${syntaxTheme.source ? ` (from ${syntaxTheme.source})` : ''} (${syntaxToggleShortcut} to disable)`
                 : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`}
         </Text>
+        {sceneHint !== null && <Text dimColor> {sceneHint}</Text>}
       </Box>
       {failedThemes.length > 0 && (
         <Box flexDirection="column" marginTop={1}>
