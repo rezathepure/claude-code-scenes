@@ -11,6 +11,9 @@ import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
 import { getRegisteredThemeNames, THEME_NAMES, type ThemeSetting } from '../utils/theme.js';
 import { getCachedThemeWarnings } from '../themes/loader.js';
+import { useModalOrTerminalSize } from '../context/modalContext.js';
+import { columnCountFor } from './ThemeGrid/layout.js';
+import { ThemeGrid } from './ThemeGrid/ThemeGrid.js';
 import { getSceneConfig } from '../scene/registry.js';
 import { getGlobalConfig } from '../utils/config.js';
 import { isFullscreenActive } from '../utils/fullscreen.js';
@@ -29,6 +32,12 @@ export type ThemePickerProps = {
   skipExitHandling?: boolean;
   /** Called when the user cancels (presses Escape). If skipExitHandling is true and this is provided, it will be called instead of just saving the preview. */
   onCancel?: () => void;
+  /**
+   * 'grid' renders the tile grid (/theme, /config); 'list' keeps the flat
+   * Select (default — onboarding relies on it, and narrow terminals fall
+   * back to it automatically even in grid mode).
+   */
+  layout?: 'list' | 'grid';
 };
 
 export function ThemePicker({
@@ -39,6 +48,7 @@ export function ThemePicker({
   hideEscToCancel = false,
   skipExitHandling = false,
   onCancel: onCancelProp,
+  layout = 'list',
 }: ThemePickerProps): React.ReactNode {
   const [theme] = useTheme();
   const themeSetting = useThemeSetting();
@@ -99,6 +109,9 @@ export function ThemePicker({
     },
   ];
 
+  const modalSize = useModalOrTerminalSize({ rows: 24, columns });
+  const useGrid = layout === 'grid' && columnCountFor(modalSize.columns) >= 2;
+
   // Why is my theme not animating? The scene layer is alt-screen-only, and
   // external users default to the inline layout — a themed animation that
   // silently does nothing is exactly the kind of failure this picker has
@@ -150,60 +163,87 @@ export function ThemePicker({
           <Text bold>Choose the text style that looks best with your terminal</Text>
           {helpText && !showHelpTextBelow && <Text dimColor>{helpText}</Text>}
         </Box>
-        <Select
-          options={themeOptions}
-          onFocus={setting => {
-            setPreviewTheme(setting as ThemeSetting);
-          }}
-          onChange={(setting: string) => {
-            savePreview();
-            onThemeSelect(setting as ThemeSetting);
-          }}
-          onCancel={
-            skipExitHandling
-              ? () => {
-                  cancelPreview();
-                  onCancelProp?.();
-                }
-              : async () => {
-                  cancelPreview();
-                  await gracefulShutdown(0);
-                }
-          }
-          visibleOptionCount={themeOptions.length}
-          defaultValue={themeSetting}
-          defaultFocusValue={themeSetting}
-        />
+        {useGrid ? (
+          <ThemeGrid
+            currentSetting={themeSetting}
+            builtinOptions={builtinThemeOptions}
+            onFocus={setting => {
+              setPreviewTheme(setting);
+            }}
+            onSelect={setting => {
+              savePreview();
+              onThemeSelect(setting);
+            }}
+            onCancel={
+              skipExitHandling
+                ? () => {
+                    cancelPreview();
+                    onCancelProp?.();
+                  }
+                : () => {
+                    cancelPreview();
+                    void gracefulShutdown(0);
+                  }
+            }
+          />
+        ) : (
+          <Select
+            options={themeOptions}
+            onFocus={setting => {
+              setPreviewTheme(setting as ThemeSetting);
+            }}
+            onChange={(setting: string) => {
+              savePreview();
+              onThemeSelect(setting as ThemeSetting);
+            }}
+            onCancel={
+              skipExitHandling
+                ? () => {
+                    cancelPreview();
+                    onCancelProp?.();
+                  }
+                : async () => {
+                    cancelPreview();
+                    await gracefulShutdown(0);
+                  }
+            }
+            visibleOptionCount={themeOptions.length}
+            defaultValue={themeSetting}
+            defaultFocusValue={themeSetting}
+          />
+        )}
       </Box>
       <Box flexDirection="column" width="100%">
-        <Box
-          flexDirection="column"
-          borderTop
-          borderBottom
-          borderLeft={false}
-          borderRight={false}
-          borderStyle="dashed"
-          borderColor="subtle"
-        >
-          <StructuredDiff
-            patch={{
-              oldStart: 1,
-              newStart: 1,
-              oldLines: 3,
-              newLines: 3,
-              lines: [
-                ' function greet() {',
-                '-  console.log("Hello, World!");',
-                '+  console.log("Hello, Claude!");',
-                ' }',
-              ],
-            }}
-            dim={false}
-            filePath="demo.js"
-            firstLine={null}
-            width={columns}
-          />
-        </Box>
+        {!useGrid && (
+          <Box
+            flexDirection="column"
+            borderTop
+            borderBottom
+            borderLeft={false}
+            borderRight={false}
+            borderStyle="dashed"
+            borderColor="subtle"
+          >
+            <StructuredDiff
+              patch={{
+                oldStart: 1,
+                newStart: 1,
+                oldLines: 3,
+                newLines: 3,
+                lines: [
+                  ' function greet() {',
+                  '-  console.log("Hello, World!");',
+                  '+  console.log("Hello, Claude!");',
+                  ' }',
+                ],
+              }}
+              dim={false}
+              filePath="demo.js"
+              firstLine={null}
+              width={columns}
+            />
+          </Box>
+        )}
         <Text dimColor>
           {' '}
           {colorModuleUnavailableReason === 'env'

@@ -21,6 +21,7 @@ function ThemePickerCommand({ onDone }: Props): React.ReactNode {
   return (
     <Pane color="permission">
       <ThemePicker
+        layout="grid"
         onThemeSelect={setting => {
           setTheme(setting);
           onDone(`Theme set to ${setting}`);

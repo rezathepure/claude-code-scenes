@@ -1648,6 +1648,7 @@ export function Config({
       {showSubmenu === 'Theme' ? (
         <>
           <ThemePicker
+            layout="grid"
             onThemeSelect={setting => {
               isDirty.current = true;
               setTheme(setting);

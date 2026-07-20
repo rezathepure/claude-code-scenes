@@ -201,6 +201,16 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
     context: 'ThemePicker',
     bindings: {
       'ctrl+t': 'theme:toggleSyntaxHighlighting',
+      // Grid navigation. Same select:* actions the Select context uses (the
+      // Settings context established this reuse pattern), so in list mode —
+      // onboarding, narrow terminals — behaviour is identical to before: the
+      // grid's handlers aren't mounted and Select's own bindings resolve.
+      up: 'select:previous',
+      down: 'select:next',
+      left: 'select:previousValue',
+      right: 'select:nextValue',
+      enter: 'select:accept',
+      escape: 'select:cancel',
     },
   },
   {
