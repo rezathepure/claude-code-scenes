@@ -20,6 +20,7 @@ import { logForDebugging } from '../utils/debug.js'
 import { errorMessage, isENOENT } from '../utils/errors.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { jsonParse } from '../utils/slowOperations.js'
+import type { SceneConfig } from '../scene/types.js'
 import { getTheme, isReservedThemeName, type Theme } from '../utils/theme.js'
 import {
   serializeThemeJsonSchema,
@@ -43,6 +44,8 @@ export type LoadedTheme = {
   description?: string
   /** Complete palette: authored slots over the mode's built-in, then repaired. */
   theme: Theme
+  /** Animated background config; params complete (defaults filled by parse). */
+  scene?: SceneConfig
 }
 
 export type ThemeLoadResult = {
@@ -132,6 +135,9 @@ export function loadThemeFromText(
   }
   if (parsed.theme.description !== undefined) {
     loaded.description = parsed.theme.description
+  }
+  if (parsed.theme.scene !== undefined) {
+    loaded.scene = parsed.theme.scene
   }
 
   return { theme: loaded, warnings }
@@ -223,7 +229,7 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
   }
 
   for (const t of themes) {
-    registerThemeWithTraits(t.name, t.theme, t.mode)
+    registerThemeWithTraits(t.name, t.theme, t.mode, t.scene)
   }
   registeredNames = themes.map(t => t.name)
 

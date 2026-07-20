@@ -14,8 +14,31 @@
  * than hand-maintained, so it cannot drift as slots are added.
  */
 
+import { PETALS_CLAMPS, RAIN_CLAMPS } from '../scene/types.js'
 import { KEY_SLOT_DOCS, SLOT_FAMILIES } from './generate/slotDocs.js'
 import { getKnownSlotNames } from './schema.js'
+
+/**
+ * Builds the params sub-schema for a scene primitive from its clamp table,
+ * so editor autocomplete shows the same mins/maxes/defaults the loader
+ * actually enforces — one source of truth for the numbers.
+ */
+function clampParamsSchema(
+  clamps: Record<string, { default: number; min: number; max: number }>,
+  descriptions: Record<string, string>,
+): Record<string, unknown> {
+  const properties: Record<string, unknown> = {}
+  for (const [key, spec] of Object.entries(clamps)) {
+    properties[key] = {
+      type: 'number',
+      minimum: spec.min,
+      maximum: spec.max,
+      default: spec.default,
+      description: descriptions[key] ?? '',
+    }
+  }
+  return { type: 'object', additionalProperties: false, properties }
+}
 
 /** Filename used inside ~/.claude/themes, hidden so it does not look like a theme. */
 export const THEME_SCHEMA_FILENAME = '.schema.json'
@@ -83,12 +106,49 @@ export function buildThemeJsonSchema(): Record<string, unknown> {
       },
       author: { type: 'string' },
       scene: {
-        type: 'object',
         description:
-          'Reserved for animated backgrounds. Only "none" is accepted today.',
-        required: ['kind'],
-        additionalProperties: false,
-        properties: { kind: { type: 'string', enum: ['none'] } },
+          'Animated background. A primitive name plus bounded numeric parameters; colours are derived from the palette. Out-of-range values are clamped on load.',
+        oneOf: [
+          {
+            type: 'object',
+            required: ['kind'],
+            additionalProperties: false,
+            properties: { kind: { type: 'string', enum: ['none'] } },
+          },
+          {
+            type: 'object',
+            required: ['kind'],
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['rain'] },
+              params: clampParamsSchema(RAIN_CLAMPS, {
+                density: 'Drops per column of terminal width.',
+                speedMin:
+                  'Slowest fall speed, cells per tick (10 ticks/second).',
+                speedMax: 'Fastest fall speed, cells per tick.',
+                trailMin: 'Shortest trail, cells.',
+                trailMax: 'Longest trail, cells.',
+                mutateRate: 'Per-glyph chance per tick of mutating.',
+              }),
+            },
+          },
+          {
+            type: 'object',
+            required: ['kind'],
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['petals'] },
+              params: clampParamsSchema(PETALS_CLAMPS, {
+                density: 'Petals per 1000 screen cells.',
+                fallMin: 'Slowest fall speed, cells per tick.',
+                fallMax: 'Fastest fall speed, cells per tick.',
+                swayAmp: 'Horizontal sway amplitude, cells.',
+                swayPeriod: 'Ticks per full sway cycle.',
+                tumblePeriod: 'Ticks per full tumble cycle.',
+              }),
+            },
+          },
+        ],
       },
       colors: {
         type: 'object',

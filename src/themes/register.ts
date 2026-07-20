@@ -20,6 +20,8 @@
  */
 
 import { registerThemeTraits, unregisterThemeTraits } from 'color-diff-napi'
+import { registerScene, unregisterScene } from '../scene/registry.js'
+import type { SceneConfig } from '../scene/types.js'
 import { isTerminalPaletteColor } from '../utils/color.js'
 import { registerTheme, type Theme, unregisterTheme } from '../utils/theme.js'
 
@@ -48,6 +50,7 @@ export function registerThemeWithTraits(
   name: string,
   theme: Theme,
   mode: ThemeMode,
+  scene?: SceneConfig,
 ): void {
   registerTheme(name, theme)
   registerThemeTraits(name, {
@@ -57,10 +60,15 @@ export function registerThemeWithTraits(
     // those are built-ins that never come through here.
     daltonized: false,
   })
+  // Third registry, same choke point, same reason: the scene lives app-side
+  // (ink cannot import src/), and registering it anywhere else would recreate
+  // the palette/traits drift this module exists to prevent.
+  registerScene(name, scene ?? { kind: 'none' })
 }
 
-/** Removes a theme from both registries. */
+/** Removes a theme from all three registries. */
 export function unregisterThemeWithTraits(name: string): void {
   unregisterTheme(name)
   unregisterThemeTraits(name)
+  unregisterScene(name)
 }

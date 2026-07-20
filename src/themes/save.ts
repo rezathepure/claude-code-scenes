@@ -9,6 +9,8 @@
 
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { getSceneConfig } from '../scene/registry.js'
+import type { SceneConfig } from '../scene/types.js'
 import { isKnownTheme, isReservedThemeName } from '../utils/theme.js'
 import { THEME_SCHEMA_REF } from './jsonSchema.js'
 import { getThemesDir } from './loader.js'
@@ -48,6 +50,7 @@ export function serializeThemeFile(theme: {
   mode: 'dark' | 'light'
   description?: string
   colors: Record<string, string>
+  scene?: SceneConfig
 }): string {
   // Points at the schema written alongside the theme files, so opening a
   // generated theme in an editor gives completion and hover docs for every
@@ -57,7 +60,9 @@ export function serializeThemeFile(theme: {
   if (theme.description) {
     body.description = theme.description
   }
-  body.scene = { kind: 'none' }
+  // The theme's actual scene, not a hardcoded 'none' — /theme export must
+  // carry a theme's animation along with its colours.
+  body.scene = theme.scene ?? { kind: 'none' }
   body.colors = theme.colors
 
   return `${JSON.stringify(body, null, 2)}\n`
@@ -81,6 +86,7 @@ export async function exportTheme(
     mode,
     description: `Copied from ${sourceName}`,
     colors,
+    scene: getSceneConfig(sourceName),
   })
 }
 
@@ -111,6 +117,7 @@ export async function saveGeneratedTheme(
     mode: 'dark' | 'light'
     description?: string
     colors: Record<string, string>
+    scene?: SceneConfig
   },
 ): Promise<SaveResult> {
   const dir = getThemesDir()

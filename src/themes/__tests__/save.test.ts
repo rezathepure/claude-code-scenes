@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { getTheme, registerTheme, unregisterTheme } from '../../utils/theme.js'
 import { findAvailableThemeName, serializeThemeFile } from '../save.js'
+import { loadThemeFromText } from '../loader.js'
+import { defaultPetalsParams, defaultRainParams } from '../../scene/types.js'
 
 const registered: string[] = []
 function register(name: string): void {
@@ -66,5 +68,34 @@ describe('serializeThemeFile', () => {
   test('omits description entirely when there is none', () => {
     const bare = JSON.parse(serializeThemeFile({ mode: 'light', colors: {} }))
     expect('description' in bare).toBe(false)
+  })
+})
+
+describe('scene passthrough', () => {
+  test('a theme with a scene keeps it when serialized', () => {
+    // The bug this locks against: serializeThemeFile used to hardcode
+    // scene:'none', so /theme export silently stripped animations.
+    const file = serializeThemeFile({
+      mode: 'dark',
+      colors: {},
+      scene: { kind: 'rain', params: defaultRainParams() },
+    })
+    const parsed = JSON.parse(file)
+    expect(parsed.scene.kind).toBe('rain')
+    expect(parsed.scene.params.density).toBe(defaultRainParams().density)
+  })
+
+  test('and round-trips through the loader unchanged', () => {
+    const file = serializeThemeFile({
+      mode: 'dark',
+      colors: {},
+      scene: { kind: 'petals', params: defaultPetalsParams() },
+    })
+    const { theme, warnings } = loadThemeFromText('round-trip-scene', file)
+    expect(warnings).toEqual([])
+    expect(theme!.scene).toEqual({
+      kind: 'petals',
+      params: defaultPetalsParams(),
+    })
   })
 })

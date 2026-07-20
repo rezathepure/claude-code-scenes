@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
+import { defaultPetalsParams, defaultRainParams } from '../../scene/types.js'
 import { getTheme, isKnownTheme, unregisterTheme } from '../../utils/theme.js'
 import { loadThemeFromText, resolveThemeColors } from '../loader.js'
 
@@ -180,7 +181,7 @@ describe('colour repair on load', () => {
   })
 })
 
-describe('the scene field is reserved but inert', () => {
+describe('the scene field', () => {
   test('kind "none" is accepted silently', () => {
     const { theme, warnings } = loadThemeFromText(
       'scenic',
@@ -189,16 +190,92 @@ describe('the scene field is reserved but inert', () => {
 
     expect(theme).not.toBeNull()
     expect(warnings).toEqual([])
+    expect(theme!.scene).toEqual({ kind: 'none' })
   })
 
-  test('an unimplemented scene kind warns without failing the theme', () => {
+  test('rain loads with every param defaulted', () => {
     const { theme, warnings } = loadThemeFromText(
       'rainy',
       JSON.stringify({ mode: 'dark', colors: {}, scene: { kind: 'rain' } }),
     )
 
+    expect(warnings).toEqual([])
+    expect(theme!.scene).toEqual({ kind: 'rain', params: defaultRainParams() })
+  })
+
+  test('petals load with authored params where given, defaults elsewhere', () => {
+    const { theme, warnings } = loadThemeFromText(
+      'blossom',
+      JSON.stringify({
+        mode: 'dark',
+        colors: {},
+        scene: { kind: 'petals', params: { density: 12 } },
+      }),
+    )
+
+    expect(warnings).toEqual([])
+    expect(theme!.scene).toEqual({
+      kind: 'petals',
+      params: { ...defaultPetalsParams(), density: 12 },
+    })
+  })
+
+  test('out-of-range params are clamped with a warning, never fatal', () => {
+    const { theme, warnings } = loadThemeFromText(
+      'flood',
+      JSON.stringify({
+        mode: 'dark',
+        colors: {},
+        scene: { kind: 'rain', params: { density: 99 } },
+      }),
+    )
+
     expect(theme).not.toBeNull()
-    expect(warnings.some(w => w.message.includes('scene'))).toBe(true)
+    expect(theme!.scene).toMatchObject({ kind: 'rain', params: { density: 1 } })
+    expect(warnings.some(w => w.message.includes('clamped'))).toBe(true)
+  })
+
+  test('a non-numeric param falls back to the default with a warning', () => {
+    const { theme, warnings } = loadThemeFromText(
+      'stringy',
+      JSON.stringify({
+        mode: 'dark',
+        colors: {},
+        scene: { kind: 'rain', params: { density: 'lots' } },
+      }),
+    )
+
+    expect(theme!.scene).toMatchObject({
+      kind: 'rain',
+      params: { density: defaultRainParams().density },
+    })
+    expect(warnings.some(w => w.message.includes('must be a number'))).toBe(
+      true,
+    )
+  })
+
+  test('unknown params are dropped with a warning', () => {
+    const { warnings } = loadThemeFromText(
+      'extra',
+      JSON.stringify({
+        mode: 'dark',
+        colors: {},
+        scene: { kind: 'rain', params: { splashiness: 5 } },
+      }),
+    )
+    expect(warnings.some(w => w.message.includes('splashiness'))).toBe(true)
+  })
+
+  test('an unknown scene kind warns and loads without an animation', () => {
+    // Forward compatibility: a theme written for a newer build still loads.
+    const { theme, warnings } = loadThemeFromText(
+      'futuristic',
+      JSON.stringify({ mode: 'dark', colors: {}, scene: { kind: 'lava' } }),
+    )
+
+    expect(theme).not.toBeNull()
+    expect(theme!.scene).toBeUndefined()
+    expect(warnings.some(w => w.message.includes('lava'))).toBe(true)
   })
 })
 
