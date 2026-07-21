@@ -54,7 +54,11 @@ const result = Bun.spawnSync(
     cliPath,
     ...process.argv.slice(2),
   ],
-  { stdio: ['inherit', 'inherit', 'inherit'], cwd: projectRoot },
+  // The caller's cwd, NOT projectRoot: all repo paths above are already
+  // absolute, and pinning cwd here made it impossible to try the CLI on a
+  // real project (`cd ~/some-project && bun <repo>/scripts/dev.ts`). Via
+  // `bun run dev` the cwd is the repo root anyway, so nothing changes there.
+  { stdio: ['inherit', 'inherit', 'inherit'], cwd: process.cwd() },
 )
 
 process.exit(result.exitCode ?? 0)
