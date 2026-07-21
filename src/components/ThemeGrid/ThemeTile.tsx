@@ -18,6 +18,38 @@ import { TileScene } from './TileScene.js';
  *  - never `<Text backgroundColor>` — that prop is theme-key-typed only;
  *  - never `dimColor` — it maps to the CURRENT theme's `inactive`.
  */
+/**
+ * Ring colours are chrome and deliberately FIXED, not taken from the tile's
+ * palette. Every tile paints in its own colours, so a palette-derived focus
+ * ring changed hue on every keypress — green on matrix, pink on sakura — and
+ * read as noise rather than "you are here". One colour, everywhere, always.
+ */
+const FOCUS_PULSE = [
+  'rgb(168,90,64)', // dim Claude Orange
+  'rgb(215,119,87)', // Claude Orange #D77757
+  'rgb(255,168,130)', // bright
+  'rgb(215,119,87)',
+] as const;
+const FOCUS_PULSE_MS = 350;
+/** Fixed green for the current theme's ring and checkmark, readable in both modes. */
+const SELECTED_COLOR = 'rgb(46,160,67)';
+
+/**
+ * Pulses the focus ring through the orange shades while active. Raw
+ * setInterval like TileScene: the shared-clock useInterval is non-keepAlive,
+ * and the picker idles with no spinner driving that clock.
+ */
+function useFocusPulse(active: boolean): string {
+  const [frame, setFrame] = React.useState(1);
+  React.useEffect(() => {
+    if (!active) return;
+    setFrame(1);
+    const timer = setInterval(() => setFrame(f => (f + 1) % FOCUS_PULSE.length), FOCUS_PULSE_MS);
+    return () => clearInterval(timer);
+  }, [active]);
+  return FOCUS_PULSE[frame] ?? FOCUS_PULSE[1];
+}
+
 function ThemeTileInner({
   entry,
   focused,
@@ -30,6 +62,7 @@ function ThemeTileInner({
   // Double assertion per house style: palette values are rgb() strings, which
   // satisfy Color at runtime via the resolver's raw-value passthrough.
   const t = getTheme(entry.paletteName) as unknown as Record<string, Color>;
+  const focusRing = useFocusPulse(focused);
   const sceneConfig = getSceneConfig(entry.paletteName);
   const scene = sceneConfig.kind === 'none' ? null : sceneConfig;
 
@@ -40,7 +73,7 @@ function ThemeTileInner({
       flexDirection="column"
       flexShrink={0}
       borderStyle={focused ? 'double' : 'round'}
-      borderColor={focused ? t.claude : selected ? t.success : t.subtle}
+      borderColor={(focused ? focusRing : selected ? SELECTED_COLOR : t.subtle) as Color}
       backgroundColor={entry.mode === 'light' ? 'rgb(245,245,245)' : undefined}
       paddingX={0}
     >
@@ -50,7 +83,7 @@ function ThemeTileInner({
             ●{' '}
           </Text>
           {selected && (
-            <Text color={t.success} bold>
+            <Text color={SELECTED_COLOR as Color} bold>
               ✓{' '}
             </Text>
           )}
@@ -87,7 +120,7 @@ function ThemeTileInner({
           </Box>
           <Box height={1}>
             <Text color={t.inactive}>{entry.mode}</Text>
-            {selected && <Text color={t.success}> · current</Text>}
+            {selected && <Text color={SELECTED_COLOR as Color}> · current</Text>}
           </Box>
         </>
       )}
