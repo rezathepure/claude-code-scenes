@@ -223,6 +223,7 @@ describe('buildGridEntries', () => {
           trailMin: 6,
           trailMax: 26,
           mutateRate: 0.01,
+          intensity: 1,
         },
       },
       { origin: 'cc' },

@@ -50,6 +50,7 @@ describe('ThemeTile', () => {
           trailMin: 6,
           trailMax: 26,
           mutateRate: 0.01,
+          intensity: 1,
         },
       },
       { origin: 'cc' },

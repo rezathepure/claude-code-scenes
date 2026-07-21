@@ -129,6 +129,8 @@ export function buildThemeJsonSchema(): Record<string, unknown> {
                 trailMin: 'Shortest trail, cells.',
                 trailMax: 'Longest trail, cells.',
                 mutateRate: 'Per-glyph chance per tick of mutating.',
+                intensity:
+                  'Overall opacity: 1 is full strength, lower fades the rain toward the background.',
               }),
             },
           },
@@ -145,6 +147,8 @@ export function buildThemeJsonSchema(): Record<string, unknown> {
                 swayAmp: 'Horizontal sway amplitude, cells.',
                 swayPeriod: 'Ticks per full sway cycle.',
                 tumblePeriod: 'Ticks per full tumble cycle.',
+                intensity:
+                  'Overall opacity: 1 is full strength, lower fades the petals toward the background.',
               }),
             },
           },

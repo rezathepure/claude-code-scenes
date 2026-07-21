@@ -131,13 +131,13 @@ class SceneController {
     if (scene.kind === 'rain') {
       this.model = createRainModel(
         scene.params,
-        deriveRainStyles(theme, ink),
+        deriveRainStyles(theme, ink, scene.params.intensity),
         mulberry32(seed),
       )
     } else {
       this.model = createPetalsModel(
         scene.params,
-        derivePetalStyles(theme, ink),
+        derivePetalStyles(theme, ink, scene.params.intensity),
         mulberry32(seed),
       )
     }

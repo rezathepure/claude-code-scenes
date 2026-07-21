@@ -89,6 +89,9 @@ describe('bundled scenes', () => {
     registerBundledThemes()
     const rain = getSceneConfig('matrix')
     if (rain.kind !== 'rain') throw new Error('expected rain')
-    expect(rain.params).toEqual(defaultRainParams())
+    // Matrix deliberately runs quieter than the primitive's default — full
+    // strength competes with the conversation text. Everything else parsing
+    // did not find in the file must be default-filled.
+    expect(rain.params).toEqual({ ...defaultRainParams(), intensity: 0.55 })
   })
 })

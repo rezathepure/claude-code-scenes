@@ -34,8 +34,16 @@ export function createTileScene(
 
   const model =
     sceneConfig.kind === 'rain'
-      ? createRainModel(sceneConfig.params, deriveRainStyles(palette, interner), mulberry32(seed >>> 0))
-      : createPetalsModel(sceneConfig.params, derivePetalStyles(palette, interner), mulberry32(seed >>> 0));
+      ? createRainModel(
+          sceneConfig.params,
+          deriveRainStyles(palette, interner, sceneConfig.params.intensity),
+          mulberry32(seed >>> 0),
+        )
+      : createPetalsModel(
+          sceneConfig.params,
+          derivePetalStyles(palette, interner, sceneConfig.params.intensity),
+          mulberry32(seed >>> 0),
+        );
   model.resize(width, height);
   return { model, colors };
 }

@@ -39,31 +39,42 @@ function fmt(c: Rgb): string {
 const FALLBACK_ACCENT: Rgb = { r: 0, g: 255, b: 65 }
 const FALLBACK_SHIMMER: Rgb = { r: 150, g: 255, b: 180 }
 
+/**
+ * `intensity` (0–1] is the scene's opacity knob: colours are faded toward
+ * black by scaling their Oklab components, which is exactly alpha-over-black
+ * — the terminal background the ramp constants were designed against. At 1
+ * the output is untouched.
+ */
 export function deriveRainStyles(
   theme: Record<string, string>,
   ink: SceneStyleInterner,
+  intensity = 1,
 ): { head: number; ramp: number[] } {
   const accent = parseColor(theme.claude ?? '') ?? FALLBACK_ACCENT
   const { c, h } = rgbToOklch(accent)
-  const chroma = Math.min(c, 0.25)
+  const chroma = Math.min(c, 0.25) * intensity
 
   const ramp: number[] = []
   for (let i = 0; i < RAIN_RAMP_STEPS; i++) {
     const l =
       RAMP_L_TOP - ((RAMP_L_TOP - RAMP_L_BOTTOM) * i) / (RAIN_RAMP_STEPS - 1)
-    ramp.push(ink.internSceneStyle(fmt(oklchToRgb({ l, c: chroma, h }))))
+    ramp.push(
+      ink.internSceneStyle(fmt(oklchToRgb({ l: l * intensity, c: chroma, h }))),
+    )
   }
 
   // Head: the theme's hue, pushed almost to white — reads as the glint.
   const head = ink.internSceneStyle(
-    fmt(oklchToRgb({ l: HEAD_L, c: chroma * 0.35, h })),
+    fmt(oklchToRgb({ l: HEAD_L * intensity, c: chroma * 0.35, h })),
   )
   return { head, ramp }
 }
 
+/** Same `intensity` semantics as deriveRainStyles. */
 export function derivePetalStyles(
   theme: Record<string, string>,
   ink: SceneStyleInterner,
+  intensity = 1,
 ): { tints: number[] } {
   const a = rgbToOklab(parseColor(theme.claude ?? '') ?? FALLBACK_ACCENT)
   const b = rgbToOklab(
@@ -76,9 +87,9 @@ export function derivePetalStyles(
       ink.internSceneStyle(
         fmt(
           oklabToRgb({
-            l: a.l + (b.l - a.l) * t,
-            a: a.a + (b.a - a.a) * t,
-            b: a.b + (b.b - a.b) * t,
+            l: (a.l + (b.l - a.l) * t) * intensity,
+            a: (a.a + (b.a - a.a) * t) * intensity,
+            b: (a.b + (b.b - a.b) * t) * intensity,
           }),
         ),
       ),

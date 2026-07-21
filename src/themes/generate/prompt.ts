@@ -84,7 +84,13 @@ function exampleColors(theme: {
   return out
 }
 
-function renderExample(name: string, theme: typeof matrix): string {
+// Structural rather than `typeof matrix`: the two bundled JSON files infer
+// different literal shapes (matrix tunes scene params, sakura does not), and
+// only these three fields matter to the prompt anyway.
+function renderExample(
+  name: string,
+  theme: { mode: string; description: string; colors: Record<string, string> },
+): string {
   return [
     `### ${name} — "${theme.description}"`,
     '```json',

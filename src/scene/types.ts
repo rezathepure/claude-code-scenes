@@ -22,6 +22,8 @@ export type RainParams = {
   trailMax: number
   /** Probability per glyph per tick of mutating to a different character. */
   mutateRate: number
+  /** Overall opacity, 1 = full strength; lower fades toward the background. */
+  intensity: number
 }
 
 export type PetalsParams = {
@@ -36,6 +38,8 @@ export type PetalsParams = {
   swayPeriod: number
   /** Ticks per full tumble cycle (4 glyph phases). */
   tumblePeriod: number
+  /** Overall opacity, 1 = full strength; lower fades toward the background. */
+  intensity: number
 }
 
 export type SceneConfig =
@@ -56,6 +60,9 @@ export const RAIN_CLAMPS: ClampSpec<RainParams> = {
   trailMin: { default: 6, min: 2, max: 40 },
   trailMax: { default: 26, min: 2, max: 40 },
   mutateRate: { default: 0.01, min: 0, max: 0.2 },
+  // Default below 1: the scene is a backdrop to read code over, and at full
+  // strength the glyphs compete with the conversation text.
+  intensity: { default: 0.7, min: 0.15, max: 1 },
 }
 
 export const PETALS_CLAMPS: ClampSpec<PetalsParams> = {
@@ -65,6 +72,7 @@ export const PETALS_CLAMPS: ClampSpec<PetalsParams> = {
   swayAmp: { default: 2.2, min: 0, max: 6 },
   swayPeriod: { default: 90, min: 20, max: 600 },
   tumblePeriod: { default: 40, min: 8, max: 400 },
+  intensity: { default: 0.7, min: 0.15, max: 1 },
 }
 
 export function defaultRainParams(): RainParams {
@@ -75,6 +83,7 @@ export function defaultRainParams(): RainParams {
     trailMin: RAIN_CLAMPS.trailMin.default,
     trailMax: RAIN_CLAMPS.trailMax.default,
     mutateRate: RAIN_CLAMPS.mutateRate.default,
+    intensity: RAIN_CLAMPS.intensity.default,
   }
 }
 
@@ -86,6 +95,7 @@ export function defaultPetalsParams(): PetalsParams {
     swayAmp: PETALS_CLAMPS.swayAmp.default,
     swayPeriod: PETALS_CLAMPS.swayPeriod.default,
     tumblePeriod: PETALS_CLAMPS.tumblePeriod.default,
+    intensity: PETALS_CLAMPS.intensity.default,
   }
 }
 

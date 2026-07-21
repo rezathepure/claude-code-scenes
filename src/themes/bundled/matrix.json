@@ -2,7 +2,7 @@
   "mode": "dark",
   "description": "Phosphor-green terminal. One hue with discipline.",
   "author": "nova theme lab",
-  "scene": { "kind": "rain" },
+  "scene": { "kind": "rain", "params": { "intensity": 0.55 } },
   "colors": {
     "text": "rgb(200,245,205)",
     "inverseText": "rgb(0,20,8)",
