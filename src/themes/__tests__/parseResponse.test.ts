@@ -114,4 +114,16 @@ describe('normalizeThemeColors', () => {
     expect(normalizeThemeColors('nope')).toBe('nope')
     expect(normalizeThemeColors({ mode: 'dark' })).toEqual({ mode: 'dark' })
   })
+
+  test('preserves the scene field alongside the colours', () => {
+    // Generated animated themes ride on this: if normalisation dropped the
+    // scene, /theme create could never land a theme in the Animated band.
+    const out = normalizeThemeColors({
+      mode: 'dark',
+      scene: { kind: 'rain', params: { intensity: 0.55 } },
+      colors: { text: 'rgb(1,2,3)' },
+    }) as Record<string, unknown>
+
+    expect(out.scene).toEqual({ kind: 'rain', params: { intensity: 0.55 } })
+  })
 })

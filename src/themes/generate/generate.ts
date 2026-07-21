@@ -18,6 +18,7 @@
 
 import type { BetaMessage } from '@anthropic-ai/sdk/resources/beta/messages/messages'
 import { isPoorModeActive } from '../../commands/poor/poorMode.js'
+import type { SceneConfig } from '../../scene/types.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 import { getMainLoopModel, getSmallFastModel } from '../../utils/model/model.js'
@@ -54,6 +55,21 @@ const CREATE_THEME_TOOL = {
           'Map of slot name to colour value. Prefer rgb(r,g,b). Set as many slots as you can; omitted slots are filled from the built-in theme.',
         additionalProperties: { type: 'string' },
       },
+      scene: {
+        type: 'object',
+        description:
+          'Animated background matched to the mood: kind "rain" (falling glyph streams), "petals" (drifting particles) or "none" (still). params.intensity 0.15-1 is the opacity of the effect; 0.55 reads as a quiet backdrop.',
+        properties: {
+          kind: { type: 'string', enum: ['none', 'rain', 'petals'] },
+          params: {
+            type: 'object',
+            description:
+              'Optional numeric overrides, e.g. {"intensity": 0.55}. Omitted values get defaults; out-of-range values are clamped.',
+            additionalProperties: { type: 'number' },
+          },
+        },
+        required: ['kind'],
+      },
     },
     required: ['mode', 'colors'],
   },
@@ -73,6 +89,8 @@ export type GenerationResult =
       colors: Record<string, string>
       mode: 'dark' | 'light'
       description?: string
+      /** Animated background, already clamped by the schema parse. */
+      scene?: SceneConfig
       /** How many slots the model actually set, before backfilling. */
       authoredSlotCount: number
       /** Anything the author should know: repairs, dropped slots, clashes. */
@@ -192,6 +210,11 @@ export async function generateTheme(
   }
   if (parsed.theme.description !== undefined) {
     result.description = parsed.theme.description
+  }
+  // parseThemeFile has already filled defaults and clamped ranges, so this is
+  // a complete, safe config — the same guarantee a hand-written file gets.
+  if (parsed.theme.scene !== undefined) {
+    result.scene = parsed.theme.scene
   }
   return result
 }

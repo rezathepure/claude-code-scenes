@@ -8,6 +8,7 @@ import { generateTheme } from '../../themes/generate/generate.js';
 import { registerThemeWithTraits, unregisterThemeWithTraits } from '../../themes/register.js';
 import { findAvailableThemeName, saveGeneratedTheme } from '../../themes/save.js';
 import type { ThemeWarning } from '../../themes/schema.js';
+import type { SceneConfig } from '../../scene/types.js';
 import type { Theme } from '../../utils/theme.js';
 import { themeNameFromDescription } from './parseArgs.js';
 
@@ -24,6 +25,7 @@ type Phase =
       mode: 'dark' | 'light';
       themeDescription?: string;
       colors: Record<string, string>;
+      scene?: SceneConfig;
       authoredSlotCount: number;
       warnings: ThemeWarning[];
     }
@@ -76,8 +78,9 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       }
 
       // Register and preview so the user sees the theme rather than a list of
-      // numbers. Unregistered again if they decline.
-      registerThemeWithTraits(name, result.colors as unknown as Theme, result.mode);
+      // numbers — scene included, so in fullscreen the backdrop animates
+      // during review too. Unregistered again if they decline.
+      registerThemeWithTraits(name, result.colors as unknown as Theme, result.mode, result.scene);
       setPreviewTheme(name);
 
       setPhase({
@@ -86,6 +89,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
         mode: result.mode,
         themeDescription: result.description,
         colors: result.colors,
+        ...(result.scene !== undefined ? { scene: result.scene } : {}),
         authoredSlotCount: result.authoredSlotCount,
         warnings: result.warnings,
       });
@@ -126,6 +130,9 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       <Box flexDirection="column">
         <Text bold color="claude">
           {phase.name}
+          {phase.scene !== undefined && phase.scene.kind !== 'none' && (
+            <Text color="claudeShimmer"> ✦ {phase.scene.kind}</Text>
+          )}
         </Text>
         {phase.themeDescription !== undefined && <Text dimColor>{phase.themeDescription}</Text>}
       </Box>
@@ -172,6 +179,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
                 mode: phase.mode,
                 description: phase.themeDescription,
                 colors: phase.colors,
+                ...(phase.scene !== undefined ? { scene: phase.scene } : {}),
               });
               savePreview();
               setTheme(phase.name);

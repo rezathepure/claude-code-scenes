@@ -86,10 +86,15 @@ function exampleColors(theme: {
 
 // Structural rather than `typeof matrix`: the two bundled JSON files infer
 // different literal shapes (matrix tunes scene params, sakura does not), and
-// only these three fields matter to the prompt anyway.
+// only these fields matter to the prompt anyway.
 function renderExample(
   name: string,
-  theme: { mode: string; description: string; colors: Record<string, string> },
+  theme: {
+    mode: string
+    description: string
+    colors: Record<string, string>
+    scene?: unknown
+  },
 ): string {
   return [
     `### ${name} — "${theme.description}"`,
@@ -98,6 +103,7 @@ function renderExample(
       {
         mode: theme.mode,
         description: theme.description,
+        ...(theme.scene !== undefined ? { scene: theme.scene } : {}),
         colors: exampleColors(theme),
       },
       null,
@@ -162,6 +168,26 @@ contexts: ${renderRemainingSlots()}
   top of them remains readable.
 - Do not invent slot names. Anything unrecognised is discarded.
 
+## Animated scene
+
+A theme may include an animated background, drawn faintly behind the
+conversation. It is data, not code: a primitive name plus bounded numbers.
+The animation's colours are derived from your palette automatically, so it
+always matches the theme.
+
+- \`"scene": { "kind": "rain" }\` — falling glyph streams. Fits electric,
+  cyber, stormy, hacker, neon moods.
+- \`"scene": { "kind": "petals" }\` — drifting, swaying particles. Fits
+  organic, gentle, floral, snowy, autumnal moods.
+- \`"scene": { "kind": "none" }\` — still. Reserve this for moods that ask
+  for stillness (paper, minimal, zen).
+
+Default to including one — an animated backdrop is this product's signature.
+The one parameter worth setting is \`params.intensity\` (0.15–1), the
+opacity of the whole effect: 1 competes with the conversation text, 0.5–0.7
+reads as a quiet backdrop. \`{ "kind": "rain", "params": { "intensity": 0.55 } }\`
+is a good default.
+
 ## Worked examples
 
 These are two themes that ship with Claude Code. Note how each picks one
@@ -175,9 +201,9 @@ ${renderExample('sakura', sakura)}
 ## Output
 
 Return a single JSON object of the same shape: \`mode\`, a one-line
-\`description\`, and \`colors\`. Specify every slot you can; any you omit will
-be filled from the built-in theme for your chosen mode, which will look
-out of place if you leave out something central.`
+\`description\`, a \`scene\`, and \`colors\`. Specify every slot you can; any
+you omit will be filled from the built-in theme for your chosen mode, which
+will look out of place if you leave out something central.`
 }
 
 /** The user half: what they asked for, and what the theme will be called. */
