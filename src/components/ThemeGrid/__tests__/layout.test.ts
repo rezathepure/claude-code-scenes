@@ -9,10 +9,12 @@ import {
   buildRows,
   columnCountFor,
   computeWindowStart,
+  flattenBands,
   type GridEntry,
   groupBands,
   moveIndex,
   rowHeight,
+  rowIndexOf,
 } from '../layout.js'
 
 const registered: string[] = []
@@ -53,32 +55,85 @@ describe('columnCountFor', () => {
 })
 
 describe('moveIndex', () => {
-  // 7 entries in 3 columns:  0 1 2 / 3 4 5 / 6
-  const count = 7
-  const cols = 3
+  // One band, 7 entries in 3 columns:  0 1 2 / 3 4 5 / 6
+  const uniform = buildRows(
+    groupBands(
+      ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(v => entry({ value: v })),
+    ),
+    3,
+  )
 
   test('left/right step and flow across rows', () => {
-    expect(moveIndex(0, 'left', count, cols)).toBe(0)
-    expect(moveIndex(2, 'right', count, cols)).toBe(3) // flows to next row
-    expect(moveIndex(6, 'right', count, cols)).toBe(6)
+    expect(moveIndex(uniform, 0, 'left')).toBe(0)
+    expect(moveIndex(uniform, 2, 'right')).toBe(3) // flows to next row
+    expect(moveIndex(uniform, 6, 'right')).toBe(6)
   })
 
-  test('up/down step by a column count', () => {
-    expect(moveIndex(4, 'up', count, cols)).toBe(1)
-    expect(moveIndex(1, 'down', count, cols)).toBe(4)
-    expect(moveIndex(0, 'up', count, cols)).toBe(0) // top clamps
+  test('up/down move within the same column', () => {
+    expect(moveIndex(uniform, 4, 'up')).toBe(1)
+    expect(moveIndex(uniform, 1, 'down')).toBe(4)
+    expect(moveIndex(uniform, 0, 'up')).toBe(0) // top clamps
   })
 
-  test('the partial last row is reachable from every column', () => {
-    // Down from 4 or 5 (columns with no tile below) lands on the last entry.
-    expect(moveIndex(3, 'down', count, cols)).toBe(6)
-    expect(moveIndex(4, 'down', count, cols)).toBe(6)
-    expect(moveIndex(5, 'down', count, cols)).toBe(6)
-    expect(moveIndex(6, 'down', count, cols)).toBe(6)
+  test('a shorter row below clamps to its last tile', () => {
+    expect(moveIndex(uniform, 3, 'down')).toBe(6)
+    expect(moveIndex(uniform, 4, 'down')).toBe(6)
+    expect(moveIndex(uniform, 5, 'down')).toBe(6)
+    expect(moveIndex(uniform, 6, 'down')).toBe(6)
+  })
+
+  test('vertical moves land on the tile visually below across band breaks', () => {
+    // Regression for the live layout: a two-tile Animated band above a full
+    // Built-in band in 3 columns. ±columnCount arithmetic put "down from
+    // matrix" on the middle of the builtin row instead of directly below.
+    //   [anim1, anim2]        (row 0: 0 1)
+    //   [c, d, e]             (row 1: 2 3 4)
+    //   [f, g]                (row 2: 5 6)
+    const banded = buildRows(
+      groupBands([
+        entry({ value: 'anim1', sceneKind: 'rain' }),
+        entry({ value: 'anim2', sceneKind: 'petals' }),
+        ...['c', 'd', 'e', 'f', 'g'].map(v => entry({ value: v })),
+      ]),
+      3,
+    )
+
+    expect(moveIndex(banded, 0, 'down')).toBe(2) // anim1 → c, same column
+    expect(moveIndex(banded, 1, 'down')).toBe(3) // anim2 → d
+    expect(moveIndex(banded, 2, 'up')).toBe(0)
+    expect(moveIndex(banded, 3, 'up')).toBe(1)
+    expect(moveIndex(banded, 4, 'up')).toBe(1) // shorter row above clamps
+    expect(moveIndex(banded, 4, 'down')).toBe(6) // shorter row below clamps
+    expect(moveIndex(banded, 6, 'down')).toBe(6) // bottom clamps
   })
 
   test('empty grid never explodes', () => {
-    expect(moveIndex(0, 'down', 0, 3)).toBe(0)
+    expect(moveIndex([], 0, 'down')).toBe(0)
+  })
+})
+
+describe('flattenBands', () => {
+  test('matches the row order buildRows renders', () => {
+    const bands = groupBands([
+      entry({ value: 'dark' }),
+      entry({ value: 'anim', sceneKind: 'rain' }),
+      entry({ value: 'mine', origin: 'cc' }),
+    ])
+    const flat = flattenBands(bands)
+    const rows = buildRows(bands, 2)
+
+    // The flat order every focus index refers to must be exactly the order
+    // the rows draw — this equivalence is what makes selection apply the
+    // tile the user is looking at.
+    expect(rows.flatMap(r => r.entries.map(e => e.value))).toEqual(
+      flat.map(e => e.value),
+    )
+    expect(flat.map(e => e.value)).toEqual(['anim', 'dark', 'mine'])
+    for (const row of rows) {
+      for (let i = 0; i < row.entries.length; i++) {
+        expect(rowIndexOf(rows, row.flatStart + i)).toBe(rows.indexOf(row))
+      }
+    }
   })
 })
 

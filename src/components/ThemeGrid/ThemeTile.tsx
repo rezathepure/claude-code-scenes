@@ -40,7 +40,7 @@ function ThemeTileInner({
       flexDirection="column"
       flexShrink={0}
       borderStyle={focused ? 'double' : 'round'}
-      borderColor={focused ? t.claude : t.subtle}
+      borderColor={focused ? t.claude : selected ? t.success : t.subtle}
       backgroundColor={entry.mode === 'light' ? 'rgb(245,245,245)' : undefined}
       paddingX={0}
     >
@@ -49,7 +49,11 @@ function ThemeTileInner({
           <Text color={t.claude} bold={focused}>
             ●{' '}
           </Text>
-          {selected && <Text color={t.success}>✓ </Text>}
+          {selected && (
+            <Text color={t.success} bold>
+              ✓{' '}
+            </Text>
+          )}
           <Text color={t.claude} bold={focused}>
             {entry.label}
           </Text>
@@ -83,6 +87,7 @@ function ThemeTileInner({
           </Box>
           <Box height={1}>
             <Text color={t.inactive}>{entry.mode}</Text>
+            {selected && <Text color={t.success}> · current</Text>}
           </Box>
         </>
       )}

@@ -75,5 +75,8 @@ describe('ThemeTile', () => {
     // after the bullet so it survives truncation even for long names.
     expect(out).toContain('✓ test-tile9');
     expect(out).toContain('✦ rain');
+    // The footer names the current theme outright — the checkmark alone was
+    // too easy to miss.
+    expect(out).toContain('dark · current');
   });
 });

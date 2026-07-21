@@ -8,9 +8,11 @@ import {
   buildRows,
   columnCountFor,
   computeWindowStart,
+  flattenBands,
   groupBands,
   moveIndex,
   rowHeight,
+  rowIndexOf,
   TILE_HEIGHT,
 } from './layout.js';
 import { ThemeTile } from './ThemeTile.js';
@@ -45,18 +47,22 @@ export function ThemeGrid({
   // Read once at mount, like the list picker — the registry is stable while
   // the dialog is open (hot reload lands on next open).
   const entries = React.useMemo(() => buildGridEntries(builtinOptions), [builtinOptions]);
+  const bands = React.useMemo(() => groupBands(entries), [entries]);
+  // The ONLY order a flat focus index may refer to is the banded visual one.
+  // Indexing `entries` here was the launch bug where selecting the tile
+  // labelled "matrix" applied "dark" (the entry at that unbanded index).
+  const ordered = React.useMemo(() => flattenBands(bands), [bands]);
   const size = useModalOrTerminalSize(useTerminalSize());
   const columnCount = Math.max(2, columnCountFor(size.columns));
-  const rows = React.useMemo(() => buildRows(groupBands(entries), columnCount), [entries, columnCount]);
+  const rows = React.useMemo(() => buildRows(bands, columnCount), [bands, columnCount]);
 
   const [focusedIndex, setFocusedIndex] = React.useState(() => {
-    const found = entries.findIndex(e => e.value === currentSetting);
+    const found = ordered.findIndex(e => e.value === currentSetting);
     return found === -1 ? 0 : found;
   });
   const [windowStart, setWindowStart] = React.useState(0);
 
-  const count = entries.length;
-  const focusedValue = entries[focusedIndex]?.value;
+  const focusedValue = ordered[focusedIndex]?.value;
 
   React.useEffect(() => {
     if (focusedValue !== undefined) {
@@ -67,7 +73,7 @@ export function ThemeGrid({
   }, [focusedValue]);
 
   const move = (direction: 'up' | 'down' | 'left' | 'right'): void => {
-    setFocusedIndex(i => moveIndex(i, direction, count, columnCount));
+    setFocusedIndex(i => moveIndex(rows, i, direction));
   };
 
   useKeybindings(
@@ -77,7 +83,7 @@ export function ThemeGrid({
       'select:previousValue': () => move('left'),
       'select:nextValue': () => move('right'),
       'select:accept': () => {
-        const value = entries[focusedIndex]?.value;
+        const value = ordered[focusedIndex]?.value;
         if (value !== undefined) onSelect(value);
       },
       'select:cancel': () => onCancel(),
@@ -87,9 +93,7 @@ export function ThemeGrid({
 
   // Window the rows so the focused one stays visible in the clipping modal.
   const rowHeights = rows.map(rowHeight);
-  const focusedRow = rows.findIndex(
-    row => focusedIndex >= row.flatStart && focusedIndex < row.flatStart + row.entries.length,
-  );
+  const focusedRow = rowIndexOf(rows, focusedIndex);
   const budget = Math.max(TILE_HEIGHT + 1, size.rows - CHROME_ROWS);
   const start = computeWindowStart(windowStart, Math.max(0, focusedRow), rowHeights, budget);
   if (start !== windowStart) {

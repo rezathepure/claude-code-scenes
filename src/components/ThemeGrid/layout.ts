@@ -116,6 +116,19 @@ export function groupBands(entries: GridEntry[]): GridBand[] {
 }
 
 /**
+ * Bands flattened back into a single list in VISUAL order — the order every
+ * flat focus index refers to.
+ *
+ * Focus math must never index the pre-banding entries array: banding reorders
+ * entries (animated first), so the two orders disagree, and selecting the
+ * tile labelled "matrix" would apply whatever happens to sit at that index in
+ * the unbanded list.
+ */
+export function flattenBands(bands: GridBand[]): GridEntry[] {
+  return bands.flatMap(band => band.entries)
+}
+
+/**
  * Columns of tiles that fit, 2-4, or 0 meaning "too narrow — use the list".
  * Tiles are separated by one column of gap.
  */
@@ -125,31 +138,46 @@ export function columnCountFor(availableColumns: number): number {
   return Math.max(2, Math.min(4, fit))
 }
 
+/** The row a flat index sits in, or -1 when out of range. */
+export function rowIndexOf(rows: GridRow[], flatIndex: number): number {
+  return rows.findIndex(
+    row =>
+      flatIndex >= row.flatStart &&
+      flatIndex < row.flatStart + row.entries.length,
+  )
+}
+
 /**
- * Arrow-key movement over the flat entry order.
+ * Arrow-key movement over the rendered rows.
  *
- * Left/right step ±1 and flow across row boundaries; up/down step by
- * columnCount. Down from the last full row lands on the last entry, so a
- * partial final row is reachable from every column.
+ * Left/right step ±1 through visual order and flow across row boundaries.
+ * Up/down move to the SAME COLUMN of the adjacent row, clamped to that row's
+ * length — rows must be consulted rather than stepping ±columnCount, because
+ * every band starts a fresh row: a two-tile Animated band in a four-column
+ * grid means the tile "below" matrix is NOT four indices away.
  */
 export function moveIndex(
+  rows: GridRow[],
   index: number,
   direction: 'up' | 'down' | 'left' | 'right',
-  count: number,
-  columnCount: number,
 ): number {
-  if (count === 0) return 0
+  if (rows.length === 0) return 0
+  const last = rows[rows.length - 1]!
+  const count = last.flatStart + last.entries.length
   switch (direction) {
     case 'left':
       return Math.max(0, index - 1)
     case 'right':
       return Math.min(count - 1, index + 1)
     case 'up':
-      return index - columnCount >= 0 ? index - columnCount : index
     case 'down': {
-      if (index + columnCount < count) return index + columnCount
-      const lastRow = Math.floor((count - 1) / columnCount)
-      return Math.floor(index / columnCount) < lastRow ? count - 1 : index
+      const r = rowIndexOf(rows, index)
+      if (r === -1) return Math.min(Math.max(index, 0), count - 1)
+      const target = direction === 'up' ? r - 1 : r + 1
+      if (target < 0 || target >= rows.length) return index
+      const column = index - rows[r]!.flatStart
+      const row = rows[target]!
+      return row.flatStart + Math.min(column, row.entries.length - 1)
     }
   }
 }
