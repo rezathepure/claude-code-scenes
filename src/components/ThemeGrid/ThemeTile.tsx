@@ -33,6 +33,14 @@ const FOCUS_PULSE = [
 const FOCUS_PULSE_MS = 350;
 /** Fixed green for the current theme's ring and checkmark, readable in both modes. */
 const SELECTED_COLOR = 'rgb(46,160,67)';
+/**
+ * Fixed neutral for every resting tile. Taking this from the tile's palette
+ * (t.subtle) gave each tile its own border colour — near-white on the ANSI
+ * themes, amber on yellowish — and the one ring that MEANS something (the
+ * selected green) disappeared in the crowd. Quiet on dark, visible on the
+ * light-tile fill.
+ */
+const RESTING_BORDER = 'rgb(96,96,96)';
 
 /**
  * Pulses the focus ring through the orange shades while active. Raw
@@ -73,7 +81,7 @@ function ThemeTileInner({
       flexDirection="column"
       flexShrink={0}
       borderStyle={focused ? 'double' : 'round'}
-      borderColor={(focused ? focusRing : selected ? SELECTED_COLOR : t.subtle) as Color}
+      borderColor={(focused ? focusRing : selected ? SELECTED_COLOR : RESTING_BORDER) as Color}
       backgroundColor={entry.mode === 'light' ? 'rgb(245,245,245)' : undefined}
       paddingX={0}
     >
