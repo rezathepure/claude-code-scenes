@@ -114,7 +114,7 @@ export async function updateCCB(): Promise<void> {
 
   // Already up to date?
   if (latestVersion === currentVersion || gte(currentVersion, latestVersion)) {
-    writeToStdout(chalk.green(`ccb is up to date (${currentVersion})`) + '\n')
+    writeToStdout(chalk.green(`cct is up to date (${currentVersion})`) + '\n')
     await gracefulShutdown(0)
     return
   }

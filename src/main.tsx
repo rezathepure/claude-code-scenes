@@ -5300,10 +5300,10 @@ async function run(): Promise<CommanderCommand> {
       await installHandler(target, options);
     });
 
-  // claude update — update ccb to the latest version via npm or bun
+  // claude update — update cct to the latest version via npm or bun
   program
     .command('update')
-    .description('Update claude-code-best (ccb) to the latest version')
+    .description('Update claude-code-best (cct) to the latest version')
     .action(async () => {
       const { updateCCB } = await import('./cli/updateCCB.js');
       await updateCCB();
