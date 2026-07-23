@@ -80,4 +80,17 @@ describe('ThemeTile', () => {
     // too easy to miss.
     expect(out).toContain('dark · current');
   });
+
+  test('renders the create promo tile instead of theme mocks', async () => {
+    const out = await renderToString(
+      <ThemeTile entry={makeEntry({ label: 'Create your own', special: 'create' })} focused={false} selected={false} />,
+      40,
+    );
+
+    expect(out).toContain('✦ Create your own');
+    expect(out).toContain('Enter to start');
+    // None of the theme-tile mock content leaks into the promo tile.
+    expect(out).not.toContain('❯ Read');
+    expect(out).not.toContain('12k tokens');
+  });
 });

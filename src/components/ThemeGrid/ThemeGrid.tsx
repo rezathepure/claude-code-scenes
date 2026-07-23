@@ -26,6 +26,8 @@ export type ThemeGridProps = {
   onFocus: (setting: ThemeSetting) => void;
   onSelect: (setting: ThemeSetting) => void;
   onCancel: () => void;
+  /** When provided, a "Create your own" tile joins the Animated band. */
+  onCreate?: () => void;
 };
 
 /**
@@ -43,10 +45,15 @@ export function ThemeGrid({
   onFocus,
   onSelect,
   onCancel,
+  onCreate,
 }: ThemeGridProps): React.ReactNode {
   // Read once at mount, like the list picker — the registry is stable while
   // the dialog is open (hot reload lands on next open).
-  const entries = React.useMemo(() => buildGridEntries(builtinOptions), [builtinOptions]);
+  const includeCreate = onCreate !== undefined;
+  const entries = React.useMemo(
+    () => buildGridEntries(builtinOptions, { includeCreate }),
+    [builtinOptions, includeCreate],
+  );
   const bands = React.useMemo(() => groupBands(entries), [entries]);
   // The ONLY order a flat focus index may refer to is the banded visual one.
   // Indexing `entries` here was the launch bug where selecting the tile
@@ -62,7 +69,11 @@ export function ThemeGrid({
   });
   const [windowStart, setWindowStart] = React.useState(0);
 
-  const focusedValue = ordered[focusedIndex]?.value;
+  // The create tile has no theme to preview: focusing it keeps the previous
+  // preview in place rather than flashing back to the saved theme.
+  const focusedEntry = ordered[focusedIndex];
+  const focusedValue =
+    focusedEntry !== undefined && focusedEntry.special === undefined ? focusedEntry.value : undefined;
 
   React.useEffect(() => {
     if (focusedValue !== undefined) {
@@ -83,8 +94,13 @@ export function ThemeGrid({
       'select:previousValue': () => move('left'),
       'select:nextValue': () => move('right'),
       'select:accept': () => {
-        const value = ordered[focusedIndex]?.value;
-        if (value !== undefined) onSelect(value);
+        const entry = ordered[focusedIndex];
+        if (entry === undefined) return;
+        if (entry.special === 'create') {
+          onCreate?.();
+          return;
+        }
+        onSelect(entry.value);
       },
       'select:cancel': () => onCancel(),
     },

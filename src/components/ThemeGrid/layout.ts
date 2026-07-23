@@ -28,7 +28,16 @@ export type GridEntry = {
   mode: 'dark' | 'light'
   sceneKind: SceneKind
   origin: ThemeOrigin
+  /**
+   * A tile that is not a theme. 'create' is the "design your own" promo tile:
+   * it never previews, never matches currentSetting, and selecting it starts
+   * the creation flow instead of applying anything.
+   */
+  special?: 'create'
 }
+
+/** Sentinel value for the create tile — never a real theme name. */
+export const CREATE_TILE_VALUE = '__create-theme__' as ThemeSetting
 
 export type GridBandKey = 'animated' | 'builtin' | 'custom' | 'official'
 export type GridBand = { key: GridBandKey; title: string; entries: GridEntry[] }
@@ -49,6 +58,7 @@ export type GridRow = {
  */
 export function buildGridEntries(
   builtinOptions: Array<{ label: string; value: ThemeSetting }>,
+  opts?: { includeCreate?: boolean },
 ): GridEntry[] {
   const entries: GridEntry[] = []
 
@@ -80,6 +90,20 @@ export function buildGridEntries(
     })
   }
 
+  if (opts?.includeCreate) {
+    // Appended last so it closes the Animated band (bandKeyFor sends it
+    // there): the two showcase themes lead, the invitation follows.
+    entries.push({
+      value: CREATE_TILE_VALUE,
+      paletteName: 'dark',
+      label: 'Create your own',
+      mode: 'dark',
+      sceneKind: 'none',
+      origin: 'cc',
+      special: 'create',
+    })
+  }
+
   return entries
 }
 
@@ -91,6 +115,9 @@ const BAND_TITLES: Record<GridBandKey, string> = {
 }
 
 function bandKeyFor(entry: GridEntry): GridBandKey {
+  // The create tile lives with the animated themes: they are the pitch, it
+  // is the call to action.
+  if (entry.special === 'create') return 'animated'
   // Animation trumps origin: matrix and sakura lead the picker — they are
   // the product — wherever they come from.
   if (entry.sceneKind !== 'none') return 'animated'

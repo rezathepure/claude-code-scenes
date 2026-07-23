@@ -38,6 +38,8 @@ export type ThemePickerProps = {
    * back to it automatically even in grid mode).
    */
   layout?: 'list' | 'grid';
+  /** Grid mode only: shows the "Create your own" tile, invoked on select. */
+  onCreate?: () => void;
 };
 
 export function ThemePicker({
@@ -49,6 +51,7 @@ export function ThemePicker({
   skipExitHandling = false,
   onCancel: onCancelProp,
   layout = 'list',
+  onCreate,
 }: ThemePickerProps): React.ReactNode {
   const [theme] = useTheme();
   const themeSetting = useThemeSetting();
@@ -167,6 +170,7 @@ export function ThemePicker({
           <ThemeGrid
             currentSetting={themeSetting}
             builtinOptions={builtinThemeOptions}
+            onCreate={onCreate}
             onFocus={setting => {
               setPreviewTheme(setting);
             }}

@@ -58,6 +58,58 @@ function useFocusPulse(active: boolean): string {
   return FOCUS_PULSE[frame] ?? FOCUS_PULSE[1];
 }
 
+/** The create tile's fixed chrome: Claude Orange on neutral greys. */
+const CREATE_ACCENT = 'rgb(215,119,87)';
+const CREATE_ACCENT_BRIGHT = 'rgb(255,168,130)';
+const CREATE_TEXT = 'rgb(200,200,200)';
+const CREATE_DIM = 'rgb(150,150,150)';
+
+/**
+ * The "design your own" promo tile. Deliberately the only resting tile with a
+ * coloured (orange) border: the grid's other rings are grey/green chrome, so
+ * this one reads as the invitation. When focused it behaves like any tile —
+ * double border, pulsing ring.
+ */
+function CreateTile({ focused, focusRing }: { focused: boolean; focusRing: string }): React.ReactNode {
+  return (
+    <Box
+      width={TILE_WIDTH}
+      height={7}
+      flexDirection="column"
+      flexShrink={0}
+      borderStyle={focused ? 'double' : 'round'}
+      borderColor={(focused ? focusRing : CREATE_ACCENT) as Color}
+      paddingX={0}
+    >
+      <Box height={1}>
+        <Text wrap="truncate-end">
+          <Text color={CREATE_ACCENT as Color} bold>
+            ✦ Create your own
+          </Text>
+        </Text>
+      </Box>
+      <Box height={1}>
+        <Text color={CREATE_ACCENT_BRIGHT as Color}> · ✧ ✦ ·</Text>
+      </Box>
+      <Box height={1}>
+        <Text wrap="truncate-end">
+          <Text color={CREATE_ACCENT_BRIGHT as Color} italic>
+            “neon tokyo rainstorm”
+          </Text>
+        </Text>
+      </Box>
+      <Box height={1}>
+        <Text wrap="truncate-end">
+          <Text color={CREATE_TEXT as Color}>→ a theme, alive</Text>
+        </Text>
+      </Box>
+      <Box height={1}>
+        <Text color={CREATE_DIM as Color}>Enter to start</Text>
+      </Box>
+    </Box>
+  );
+}
+
 function ThemeTileInner({
   entry,
   focused,
@@ -71,6 +123,10 @@ function ThemeTileInner({
   // satisfy Color at runtime via the resolver's raw-value passthrough.
   const t = getTheme(entry.paletteName) as unknown as Record<string, Color>;
   const focusRing = useFocusPulse(focused);
+
+  if (entry.special === 'create') {
+    return <CreateTile focused={focused} focusRing={focusRing} />;
+  }
   const sceneConfig = getSceneConfig(entry.paletteName);
   const scene = sceneConfig.kind === 'none' ? null : sceneConfig;
 

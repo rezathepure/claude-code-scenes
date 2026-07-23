@@ -9,6 +9,7 @@ import {
   buildRows,
   columnCountFor,
   computeWindowStart,
+  CREATE_TILE_VALUE,
   flattenBands,
   type GridEntry,
   groupBands,
@@ -244,5 +245,30 @@ describe('buildGridEntries', () => {
   test('rowHeight adds one line for a header', () => {
     const rows = buildRows(groupBands([entry({ value: 'dark' })]), 2)
     expect(rowHeight(rows[0]!)).toBe(8)
+  })
+
+  test('the create tile is opt-in and closes the Animated band', () => {
+    // Absent unless asked for — onboarding and /config show a plain grid.
+    const plain = buildGridEntries(BUILTINS)
+    expect(plain.some(e => e.special === 'create')).toBe(false)
+
+    const withCreate = buildGridEntries(BUILTINS, { includeCreate: true })
+    const create = withCreate[withCreate.length - 1]!
+    expect(create).toMatchObject({
+      special: 'create',
+      value: CREATE_TILE_VALUE,
+      label: 'Create your own',
+    })
+
+    // The showcase themes lead the band; the invitation follows them.
+    const bands = groupBands([
+      entry({ value: 'test-only-rainy', sceneKind: 'rain' }),
+      create,
+    ])
+    expect(bands[0]!.key).toBe('animated')
+    expect(bands[0]!.entries.map(e => e.value)).toEqual([
+      'test-only-rainy',
+      CREATE_TILE_VALUE,
+    ])
   })
 })
