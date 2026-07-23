@@ -19,12 +19,33 @@ type Props = {
 };
 
 /**
+ * A few real vibes to spark ideas — not lifted from the shipped themes, so
+ * anyone reading them recognises they are examples, not options to pick.
+ */
+const VIBE_EXAMPLES = [
+  'cyberpunk thunderstorm',
+  'moody vampire castle',
+  'autumn library at dusk',
+  'sakura in moonlight',
+  'phosphor terminal, 1984',
+  'sunlit sea glass',
+];
+
+/**
  * The vibe prompt behind the grid's "Create your own" tile.
+ *
+ * Deliberately spread out to fill the pane. The first draft was five short
+ * lines, which the modal slot dutifully shrunk down to a tiny bar at the
+ * bottom of the screen — the pane sizes itself to its content. Now it reads
+ * as an intentional design canvas: title, invitation, framed input, ideas
+ * you can borrow, footer hints.
  *
  * Esc goes back to the grid rather than closing the command — abandoning the
  * idea should not cost the user the picker they came from. The Settings
- * context maps Esc alone to confirm:no (no bare letters), so typing a vibe
- * containing 'n' is safe — the same trick the agent-creation wizard uses.
+ * context handles Esc via confirm:no; the letters it also binds (j/k/r//)
+ * are ignored here because this hook only registers confirm:no, so typed
+ * characters fall through to TextInput's own useInput (verified against the
+ * agent-creation wizard's identical pattern in DescriptionStep).
  */
 function DescribeTheme({
   onBack,
@@ -39,18 +60,28 @@ function DescribeTheme({
 
   useKeybinding('confirm:no', onBack, { context: 'Settings' });
 
+  // Inner width the input box actually gets, accounting for pane padding
+  // (Pane's paddingX=1 inside a modal), our marginX=2, the input's own
+  // borderStyle (2), paddingX=1 inside it (2), and the "❯ " prompt (2).
+  const innerWidth = Math.max(20, columns - 12);
+
   return (
     <Pane color="permission">
-      <Box flexDirection="column" gap={1}>
-        <Box flexDirection="column">
+      <Box flexDirection="column" gap={1} paddingY={1}>
+        <Box flexDirection="column" marginX={2} gap={1}>
           <Text bold color="claude">
-            ✦ Create your own theme
+            ✦ Design your own theme
           </Text>
-          <Text dimColor>
-            Describe a mood, a place, a film, a feeling — the palette and its animation are designed for you.
+          <Text>
+            <Text color="text">Describe anything — a mood, a place, a film, a season.</Text>{' '}
+            <Text dimColor>
+              Claude will design a palette and pick an animation to match. You review it live, and keep it only if you
+              love it.
+            </Text>
           </Text>
         </Box>
-        <Box>
+
+        <Box marginX={2} borderStyle="round" borderColor="claude" paddingX={1}>
           <Text color="claude">❯ </Text>
           <TextInput
             value={value}
@@ -59,17 +90,31 @@ function DescribeTheme({
               const trimmed = v.trim();
               if (trimmed.length > 0) onSubmit(trimmed);
             }}
-            placeholder="e.g. neon tokyo rainstorm"
-            columns={Math.max(20, columns - 8)}
+            placeholder="give it a vibe — anything you can picture"
+            columns={innerWidth}
             cursorOffset={cursorOffset}
             onChangeCursorOffset={setCursorOffset}
             focus
             showCursor
           />
         </Box>
-        <Text dimColor italic>
-          Enter to design it · Esc to go back
-        </Text>
+
+        <Box flexDirection="column" marginX={2}>
+          <Text dimColor>Try one, or borrow the idea:</Text>
+          <Box flexDirection="column" marginLeft={2} marginTop={1}>
+            {VIBE_EXAMPLES.map(v => (
+              <Text key={v} dimColor italic>
+                · {v}
+              </Text>
+            ))}
+          </Box>
+        </Box>
+
+        <Box marginX={2} marginTop={1}>
+          <Text dimColor italic>
+            Enter to design it · Esc to go back to the grid
+          </Text>
+        </Box>
       </Box>
     </Pane>
   );
