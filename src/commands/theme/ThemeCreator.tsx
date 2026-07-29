@@ -1,6 +1,7 @@
 import { Box, Text, usePreviewTheme, useTheme, useThemeSetting } from '@anthropic/ink';
 import * as React from 'react';
 import { Select } from '../../components/CustomSelect/index.js';
+import { useModalOrTerminalSize } from '../../context/modalContext.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { StructuredDiff } from '../../components/StructuredDiff.js';
 import { Spinner } from '../../components/Spinner.js';
@@ -52,7 +53,11 @@ const SAMPLE_PATCH = {
  */
 export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
   const [phase, setPhase] = React.useState<Phase>({ kind: 'generating' });
-  const { columns } = useTerminalSize();
+  // The modal slot, not the terminal. In fullscreen a local-jsx panel gets
+  // `columns - 4`, and Pane adds a further paddingX=1 each side — a sample
+  // rendered at raw terminal width overran the frame by six columns.
+  const modal = useModalOrTerminalSize(useTerminalSize());
+  const width = Math.max(24, modal.columns - 2);
   const [, setTheme] = useTheme();
   const themeSetting = useThemeSetting();
   const { setPreviewTheme, savePreview, cancelPreview } = usePreviewTheme();
@@ -79,14 +84,34 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
   // preview alone — by then it is a choice rather than a preview.
   const keptRef = React.useRef(false);
 
+  // The name currently in the theme registry, or null. Distinct from nameRef,
+  // which is claimed before generation and survives a retry.
+  const registeredRef = React.useRef<string | null>(null);
+
+  /**
+   * Drops the preview and any draft we put in the registry. Idempotent.
+   *
+   * The unregister half used to be missing from every path except an explicit
+   * Discard, so a draft abandoned any other way stayed in the registry and
+   * showed up as a real theme in the picker — one that had never been written
+   * to disk and would vanish on restart.
+   */
+  const releaseDraft = React.useCallback(() => {
+    previewRef.current.cancelPreview();
+    if (registeredRef.current !== null) {
+      unregisterThemeWithTraits(registeredRef.current);
+      registeredRef.current = null;
+    }
+  }, []);
+
   React.useEffect(
     () => () => {
       // Anything that unmounts this panel without a decision — Esc, another
       // command taking the slot — would otherwise leave the app wearing the
       // canvas or a half-judged attempt. Neither is what the user chose.
-      if (!keptRef.current) previewRef.current.cancelPreview();
+      if (!keptRef.current) releaseDraft();
     },
-    [],
+    [releaseDraft],
   );
 
   // Bumped to ask for another attempt. Each generation is independent, so a
@@ -118,6 +143,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       // numbers — scene included, so in fullscreen the backdrop animates
       // during review too. Unregistered again if they decline.
       registerThemeWithTraits(name, result.colors as unknown as Theme, result.mode, result.scene);
+      registeredRef.current = name;
       previewRef.current.setPreviewTheme(name);
 
       setPhase({
@@ -138,6 +164,11 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
     };
   }, [description, attempt, canvas]);
 
+  const giveUp = (): void => {
+    releaseDraft();
+    onDone('No theme created.');
+  };
+
   if (phase.kind === 'generating') {
     return (
       <Box flexDirection="column" gap={1}>
@@ -155,6 +186,28 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       <Box flexDirection="column" gap={1}>
         <Text color="error">Could not create a theme.</Text>
         <Text dimColor>{phase.error}</Text>
+        {/* Without these there is no way out at all: the panel binds no Esc of
+            its own, and the REPL's chat:cancel is gated off while a local-jsx
+            panel is mounted. A failed generation stranded the user on this
+            screen until Ctrl+C. */}
+        <Select
+          options={[
+            { label: 'Try again', value: 'retry' },
+            { label: 'Give up', value: 'discard' },
+          ]}
+          onCancel={giveUp}
+          onChange={(choice: string) => {
+            if (choice === 'retry') {
+              setPhase({ kind: 'generating' });
+              setAttempt(n => n + 1);
+              return;
+            }
+            giveUp();
+          }}
+        />
+        <Text dimColor italic>
+          Enter to choose · Esc to close
+        </Text>
       </Box>
     );
   }
@@ -173,7 +226,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       </Box>
 
       <Box flexDirection="column">
-        <StructuredDiff patch={SAMPLE_PATCH} dim={false} filePath="demo.ts" firstLine={null} width={columns} />
+        <StructuredDiff patch={SAMPLE_PATCH} dim={false} filePath="demo.ts" firstLine={null} width={width} />
       </Box>
 
       <Box flexDirection="column">
@@ -202,8 +255,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
           if (choice === 'retry') {
             // Drop the rejected attempt before asking for another, so the
             // preview does not keep showing a theme that no longer exists.
-            cancelPreview();
-            unregisterThemeWithTraits(phase.name);
+            releaseDraft();
             setPhase({ kind: 'generating' });
             setAttempt(n => n + 1);
             return;
@@ -226,8 +278,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
               );
             })();
           } else {
-            cancelPreview();
-            unregisterThemeWithTraits(phase.name);
+            releaseDraft();
             onDone('Theme discarded.');
           }
         }}

@@ -4,6 +4,7 @@ import { Box, Pane, Text } from '@anthropic/ink';
 import { ThemePicker } from '../../components/ThemePicker.js';
 import { useTheme } from '@anthropic/ink';
 import TextInput from '../../components/TextInput.js';
+import { useModalOrTerminalSize } from '../../context/modalContext.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { useKeybinding } from '../../keybindings/useKeybinding.js';
 import type { LocalJSXCommandCall } from '../../types/command.js';
@@ -56,7 +57,9 @@ function DescribeTheme({
 }): React.ReactNode {
   const [value, setValue] = React.useState('');
   const [cursorOffset, setCursorOffset] = React.useState(0);
-  const { columns } = useTerminalSize();
+  // The modal slot when there is one — a local-jsx panel gets `columns - 4`,
+  // so sizing off the raw terminal made the framed input overhang its pane.
+  const { columns } = useModalOrTerminalSize(useTerminalSize());
 
   useKeybinding('confirm:no', onBack, { context: 'Settings' });
 
