@@ -110,4 +110,36 @@ CLAUDE_CODE_NO_FLICKER=1 FEATURE_SCENE_LAYER=1 bun run dev
 
 The 26×4 tile in `/theme` renders through the same compiler, and for anyone not
 running alt-screen it is the only place a scene is visible — so it is treated
-as a first-class target and every preset is tested at that size.
+as a first-class target and every preset is tested at that size. The create
+flow shows a larger box of the same thing (`BackdropPreview`), paired with a
+prose summary from `describeScene`: sparse scenes genuinely put three or four
+characters in a panel-sized box, and the words are what you can act on.
+
+## Designing one
+
+`/theme` → **Create your own** → describe a vibe. One generation, then a loop:
+
+- **Backdrop** — the animation, and a box to describe changes to it.
+- **Text colours** — a scripted session exercising fifteen slots.
+
+Either view accepts a change in plain language ("slower", "add drifting
+embers", "calmer warnings"), applies it to the same draft, and can be undone.
+Both are peers — Keep works from either.
+
+Three rules hold that together, and changing any of them breaks it:
+
+1. **Omission means unchanged.** `refine_theme` returns a colour *delta*, and
+   an absent `scene` leaves the animation alone. Enforced in `mergeRefinement`
+   (`src/themes/generate/refine.ts`), never by narrowing the tool schema — a
+   scene-only tool would have to answer "brighter greens" with a shrug.
+   `mergeRefinement` must never call `resolveThemeColors`: that fills from the
+   *built-in* palette and would silently reset every slot not mentioned.
+2. **One user turn, never a conversation.** The OpenAI and Gemini adapters in
+   `sideQuery` keep only text blocks, so an assistant turn that is a lone
+   `tool_use` vanishes on three of four providers. The current theme is
+   embedded in the user turn instead. See `src/themes/generate/call.ts`.
+3. **Re-registering the same name must repaint.** `ThemeProvider` folds the
+   theme registry version into its context value, and the creator calls
+   `sceneController.refresh()` after each re-register because `SceneBridge`
+   syncs on the theme *name*, which has not changed. Without both, every
+   refinement is invisible.
