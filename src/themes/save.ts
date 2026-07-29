@@ -14,7 +14,7 @@ import type { SceneConfig } from '../scene/types.js'
 import { isKnownTheme, isReservedThemeName } from '../utils/theme.js'
 import { THEME_SCHEMA_REF } from './jsonSchema.js'
 import { serializeSceneConfig } from './schema.js'
-import { getCcThemesDir } from './loader.js'
+import { getCctThemesDir } from './loader.js'
 
 export type SaveResult =
   | { ok: true; name: string; path: string }
@@ -94,13 +94,16 @@ export async function exportTheme(
 }
 
 /**
- * Deletes a theme file.
+ * Deletes a theme file from `dir`, defaulting to ours.
  *
- * Only touches ~/.claude/themes; built-in themes have no file and are refused
- * before we get here.
+ * Official themes pass their own directory: they are real files, and refusing
+ * to remove one only meant the user had to go and do it by hand.
  */
-export async function deleteThemeFile(name: string): Promise<SaveResult> {
-  const path = join(getCcThemesDir(), `${name}.json`)
+export async function deleteThemeFile(
+  name: string,
+  dir: string = getCctThemesDir(),
+): Promise<SaveResult> {
+  const path = join(dir, `${name}.json`)
   try {
     await rm(path)
     return { ok: true, name, path }
@@ -123,7 +126,7 @@ export async function saveGeneratedTheme(
     scene?: SceneConfig
   },
 ): Promise<SaveResult> {
-  const dir = getCcThemesDir()
+  const dir = getCctThemesDir()
   const path = join(dir, `${name}.json`)
 
   try {

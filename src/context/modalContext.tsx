@@ -1,5 +1,5 @@
-import { createContext, type RefObject, useContext } from 'react';
-import type { ScrollBoxHandle } from '@anthropic/ink';
+import { type RefObject, useContext } from 'react';
+import { ModalContext, type ScrollBoxHandle } from '@anthropic/ink';
 
 /**
  * Set by FullscreenLayout when rendering content in its `modal` slot —
@@ -17,17 +17,18 @@ import type { ScrollBoxHandle } from '@anthropic/ink';
  *   without scrollTo() timing games.
  *
  * null = not inside the modal slot.
+ *
+ * The context OBJECT is re-exported from @anthropic/ink rather than declared
+ * here. There used to be two of them — this one, which FullscreenLayout
+ * provided, and ink's, which `Pane` and `Tabs` consumed. Same name, same
+ * fields, different React context, so the first bullet above was never
+ * actually true: `useIsInsideModal()` inside Pane was permanently false.
+ * Every slash-command screen drew its own full-terminal-width Divider on top
+ * of FullscreenLayout's ▔ frame, and since that Divider sits inside the modal
+ * slot's paddingX={2} it wrapped, orphaning exactly four characters onto the
+ * row below — the stray stub under the rule in /theme.
  */
-type ModalCtx = {
-  rows: number;
-  columns: number;
-  scrollRef: RefObject<ScrollBoxHandle | null> | null;
-};
-export const ModalContext = createContext<ModalCtx | null>(null);
-
-export function useIsInsideModal(): boolean {
-  return useContext(ModalContext) !== null;
-}
+export { ModalContext, useIsInsideModal } from '@anthropic/ink';
 
 /**
  * Available content rows/columns when inside a Modal, else falls back to

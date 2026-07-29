@@ -28,7 +28,7 @@ function officialDir(): string {
   return join(tempDir, 'themes')
 }
 function ccDir(): string {
-  return join(tempDir, 'cc-themes')
+  return join(tempDir, 'cct')
 }
 
 beforeEach(async () => {
@@ -114,7 +114,7 @@ describe('migrateLegacyThemes', () => {
     expect(result).toEqual({ moved: [], skipped: [], schemaRemoved: false })
     // The cc dir must exist regardless — the watcher cannot watch a missing
     // dir, and the first /theme create must land somewhere watched.
-    expect(await readdir(tempDir)).toContain('cc-themes')
+    expect(await readdir(tempDir)).toContain('cct')
   })
 
   test('running twice is a no-op the second time', async () => {
@@ -126,5 +126,68 @@ describe('migrateLegacyThemes', () => {
 
     expect(first.moved).toEqual(['mine.json'])
     expect(second).toEqual({ moved: [], skipped: [], schemaRemoved: false })
+  })
+})
+
+describe('the cc-themes → cct rename', () => {
+  function legacyDir(): string {
+    return join(tempDir, 'cc-themes')
+  }
+
+  test('moves saved themes into the new directory and retires the old one', async () => {
+    // These are the user's own generated themes. Losing them to a directory
+    // rename would be the worst possible outcome of a cosmetic change.
+    await mkdir(legacyDir(), { recursive: true })
+    await writeFile(join(legacyDir(), 'cyberpunk.json'), OURS)
+    await writeFile(join(legacyDir(), 'yellowish.json'), OURS)
+    await writeFile(join(legacyDir(), '.schema.json'), '{"title":"x"}')
+
+    const result = await migrateLegacyThemes()
+
+    expect(result.moved.sort()).toEqual(['cyberpunk.json', 'yellowish.json'])
+    expect((await readdir(ccDir())).sort()).toEqual([
+      'cyberpunk.json',
+      'yellowish.json',
+    ])
+    // The old directory is gone entirely, schema and all.
+    expect(await readdir(tempDir)).not.toContain('cc-themes')
+  })
+
+  test('never clobbers a theme that already exists under the new name', async () => {
+    await mkdir(legacyDir(), { recursive: true })
+    await mkdir(ccDir(), { recursive: true })
+    await writeFile(join(legacyDir(), 'clash.json'), OURS)
+    await writeFile(join(ccDir(), 'clash.json'), '{"mode":"light","colors":{}}')
+
+    const result = await migrateLegacyThemes()
+
+    expect(result.moved).not.toContain('clash.json')
+    expect(result.skipped.map(s => s.file)).toContain('clash.json')
+    // The newer file wins and the old one is left where it is to be resolved.
+    expect(await readFile(join(ccDir(), 'clash.json'), 'utf-8')).toContain(
+      'light',
+    )
+    expect(await readdir(legacyDir())).toContain('clash.json')
+  })
+
+  test('leaves anything it does not recognise, and the directory with it', async () => {
+    await mkdir(legacyDir(), { recursive: true })
+    await writeFile(join(legacyDir(), 'notes.txt'), 'keep me')
+
+    await migrateLegacyThemes()
+
+    expect(await readdir(legacyDir())).toEqual(['notes.txt'])
+  })
+
+  test('is a no-op the second time', async () => {
+    await mkdir(legacyDir(), { recursive: true })
+    await writeFile(join(legacyDir(), 'once.json'), OURS)
+
+    await migrateLegacyThemes()
+    const second = await migrateLegacyThemes()
+
+    expect(second.moved).toEqual([])
+    expect(second.skipped).toEqual([])
+    expect(await readdir(ccDir())).toEqual(['once.json'])
   })
 })

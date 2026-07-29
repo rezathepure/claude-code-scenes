@@ -239,7 +239,15 @@ export type GlobalConfig = {
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
   showTurnDuration: boolean // Controls whether to show turn duration message (e.g., "Cooked for 1m 6s")
-  sceneAnimationsEnabled: boolean // Animated theme background scenes (rain, petals)
+  sceneAnimationsEnabled: boolean // Animated theme background scenes
+  /**
+   * Themes that ship inside the binary and have been deleted by the user.
+   *
+   * Bundled themes have no file to remove, so deleting one has to be recorded
+   * rather than performed — otherwise registerBundledThemes would hand it
+   * straight back on the next launch. `/theme restore <name>` empties an entry.
+   */
+  hiddenThemes: string[]
   /**
    * @deprecated Use settings.env instead.
    */
@@ -603,6 +611,7 @@ function createDefaultGlobalConfig(): GlobalConfig {
     autoCompactEnabled: true,
     showTurnDuration: true,
     sceneAnimationsEnabled: true,
+    hiddenThemes: [],
     hasSeenTasksHint: false,
     hasUsedStash: false,
     hasUsedBackgroundTask: false,
@@ -648,6 +657,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'autoCompactEnabled',
   'showTurnDuration',
   'sceneAnimationsEnabled',
+  'hiddenThemes',
   'diffTool',
   'env',
   'tipsHistory',

@@ -16,6 +16,7 @@ export type ParsedThemeCommand =
   | { kind: 'create'; description: string }
   | { kind: 'export'; source: string }
   | { kind: 'delete'; name: string }
+  | { kind: 'restore'; name: string }
   | { kind: 'error'; message: string }
 
 /**
@@ -98,10 +99,20 @@ export function parseThemeArgs(args: string): ParsedThemeCommand {
       }
       return { kind: 'delete', name: rest }
 
+    case 'restore':
+      if (rest.length === 0) {
+        return {
+          kind: 'error',
+          message:
+            'Name the theme to restore, for example: /theme restore matrix — this brings back a theme that ships with cct.',
+        }
+      }
+      return { kind: 'restore', name: rest }
+
     default:
       return {
         kind: 'error',
-        message: `Unknown option "${subCmd}". Use "/theme" to pick one, "/theme create <description>" to generate one, "/theme export <name>" to copy one for editing, or "/theme delete <name>" to remove one.`,
+        message: `Unknown option "${subCmd}". Use "/theme" to pick one, "/theme create <description>" to generate one, "/theme export <name>" to copy one for editing, or "/theme delete <name>" to remove one. A theme that ships with cct comes back with "/theme restore <name>".`,
       }
   }
 }

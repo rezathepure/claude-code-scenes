@@ -131,10 +131,13 @@ function ThemeTileInner({
   entry,
   focused,
   selected,
+  confirming,
 }: {
   entry: GridEntry;
   focused: boolean;
   selected: boolean;
+  /** Set while `d` has been pressed on this tile; `blocked` explains a refusal. */
+  confirming?: { blocked: string | null };
 }): React.ReactNode {
   // Double assertion per house style: palette values are rgb() strings, which
   // satisfy Color at runtime via the resolver's raw-value passthrough.
@@ -174,7 +177,9 @@ function ThemeTileInner({
           {entry.sceneLabel !== null && <Text color={t.claudeShimmer}> ✦ {sceneChip(entry)}</Text>}
         </Text>
       </Box>
-      {focused && scene !== null ? (
+      {confirming !== undefined ? (
+        <DeleteConfirm entry={entry} blocked={confirming.blocked} palette={t} />
+      ) : focused && scene !== null ? (
         <TileScene sceneConfig={scene} palette={t} width={TILE_INNER_WIDTH} height={4} />
       ) : (
         <>
@@ -206,6 +211,74 @@ function ThemeTileInner({
         </>
       )}
     </Box>
+  );
+}
+
+/**
+ * The confirmation, drawn inside the tile it is about.
+ *
+ * Deliberately in place rather than in a bar below the grid: the thing being
+ * destroyed should be the thing you are looking at while you decide. A theme
+ * that cannot be deleted says why instead of asking, so `d` always does
+ * something explicable.
+ */
+function DeleteConfirm({
+  entry,
+  blocked,
+  palette,
+}: {
+  entry: GridEntry;
+  blocked: string | null;
+  palette: Record<string, Color>;
+}): React.ReactNode {
+  if (blocked !== null) {
+    return (
+      <>
+        <Box height={1}>
+          <Text wrap="truncate-end" color={palette.warning}>
+            Cannot delete
+          </Text>
+        </Box>
+        <Box height={3}>
+          {/* Wrapped, not truncated: a refusal that stops mid-sentence tells
+              the user nothing about what to do instead. */}
+          <Text wrap="wrap" color={palette.inactive}>
+            {blocked}
+          </Text>
+        </Box>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* The tile header directly above already shows the name; repeating it
+          here only bought a second truncated copy of it. */}
+      <Box height={1}>
+        <Text wrap="truncate-end" color={palette.error}>
+          Delete this theme?
+        </Text>
+      </Box>
+      <Box height={1}>
+        <Text wrap="truncate-end" color={palette.inactive}>
+          Its file is removed.
+        </Text>
+      </Box>
+      <Box height={1}>
+        <Text wrap="truncate-end" color={palette.error}>
+          d
+        </Text>
+        <Text wrap="truncate-end" color={palette.inactive}>
+          {' '}
+          again to delete
+        </Text>
+      </Box>
+      <Box height={1}>
+        <Text wrap="truncate-end" color={palette.inactive}>
+          Esc to keep it
+        </Text>
+      </Box>
+    </>
   );
 }
 

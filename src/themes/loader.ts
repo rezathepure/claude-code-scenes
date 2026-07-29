@@ -68,11 +68,18 @@ export function getOfficialThemesDir(): string {
 /**
  * Our directory: everything this fork writes (generated themes, exports, the
  * editor-autocomplete schema) lives here, so official's picker never sees our
- * internals and vice versa. Created at startup by migrateLegacyThemes.
+ * internals and vice versa. Created at startup by migrateLegacyThemes, which
+ * also moves anything left in the older ~/.claude/cc-themes.
  */
-export function getCcThemesDir(): string {
-  return join(getClaudeConfigHomeDir(), 'cc-themes')
+export function getCctThemesDir(): string {
+  return join(getClaudeConfigHomeDir(), CCT_THEMES_DIRNAME)
 }
+
+/** Directory name under ~/.claude. Shared with the migration. */
+export const CCT_THEMES_DIRNAME = 'cct'
+
+/** Where our themes used to live, before the rename to cct. */
+export const LEGACY_CCT_THEMES_DIRNAME = 'cc-themes'
 
 /**
  * Fills in every slot the author left out from the built-in theme for their
@@ -284,7 +291,7 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
       // fs). Load it in place; origin is the directory it lives in, so the
       // delete-refusal message stays literally true.
       logForDebugging(
-        `[themes] ${file} in ${officialDir} is a cc-themes file — it belongs in ${getCcThemesDir()}`,
+        `[themes] ${file} in ${officialDir} is a cct theme file — it belongs in ${getCctThemesDir()}`,
       )
       const { theme, warnings: w } = loadThemeFromText(name, text, 'official')
       warnings.push(...w)
@@ -298,7 +305,7 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
   }
 
   // ── Our directory ──
-  const ccDir = getCcThemesDir()
+  const ccDir = getCctThemesDir()
   let ccEntries: string[] | null = null
   try {
     ccEntries = await readdir(ccDir)

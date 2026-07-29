@@ -14,6 +14,7 @@
  * one out as a starting point.
  */
 
+import { getGlobalConfig } from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { loadThemeFromText } from '../loader.js'
 import type { ThemeWarning } from '../schema.js'
@@ -47,7 +48,22 @@ const BUNDLED: ReadonlyArray<readonly [string, unknown]> = [
 export function registerBundledThemes(): ThemeWarning[] {
   const warnings: ThemeWarning[] = []
 
+  // Deleting a bundled theme cannot remove a file, so it is recorded in
+  // config instead; honouring it here is what makes the deletion stick.
+  //
+  // Guarded because registration must never fail over a preference: init
+  // calls enableConfigs() first so this read is fine there, but a caller that
+  // registers themes earlier would otherwise take down the whole registry and
+  // leave the app with no palettes at all.
+  let hidden = new Set<string>()
+  try {
+    hidden = new Set(getGlobalConfig().hiddenThemes ?? [])
+  } catch {
+    // Config not readable yet — ship everything.
+  }
+
   for (const [name, data] of BUNDLED) {
+    if (hidden.has(name)) continue
     // Round-tripping through text keeps this on the single load path rather
     // than adding a second, subtly different one for bundled themes.
     const result = loadThemeFromText(name, JSON.stringify(data))

@@ -2,6 +2,7 @@ import { Box, Text, useTerminalSize } from '@anthropic/ink';
 import * as React from 'react';
 import { useModalOrTerminalSize } from '../../context/modalContext.js';
 import { useKeybindings } from '../../keybindings/useKeybinding.js';
+import { canDeleteTheme } from '../../themes/remove.js';
 import type { ThemeSetting } from '../../utils/theme.js';
 import {
   buildGridEntries,
@@ -17,8 +18,14 @@ import {
 } from './layout.js';
 import { ThemeTile } from './ThemeTile.js';
 
-/** Rows of picker chrome around the grid (headers, hints, warnings, slack). */
-const CHROME_ROWS = 8;
+/**
+ * Rows of picker chrome around the grid (headers, hints, warnings, slack).
+ *
+ * Raised from 8 to pay for the delete hint below the tiles AND to stop the
+ * picker's own Enter/Esc footer landing on the very last terminal row, where
+ * it was being clipped — which is how the delete key shipped invisible.
+ */
+const CHROME_ROWS = 10;
 
 export type ThemeGridProps = {
   currentSetting: ThemeSetting;
@@ -28,7 +35,14 @@ export type ThemeGridProps = {
   onCancel: () => void;
   /** When provided, a "Create your own" tile joins the Animated band. */
   onCreate?: () => void;
+  /** When provided, `d` offers to delete the focused theme. */
+  onDelete?: (name: ThemeSetting) => void | Promise<void>;
+  /** Bumped by the parent after a delete, to rebuild the tiles. */
+  generation?: number;
 };
+
+/** The tile awaiting confirmation, and why it cannot be deleted if it cannot. */
+type PendingDelete = { name: ThemeSetting; blocked: string | null };
 
 /**
  * The 2D theme picker: bands of preview tiles, arrow-key navigation over a
@@ -46,14 +60,19 @@ export function ThemeGrid({
   onSelect,
   onCancel,
   onCreate,
+  onDelete,
+  generation = 0,
 }: ThemeGridProps): React.ReactNode {
   // Read once at mount, like the list picker — the registry is stable while
   // the dialog is open (hot reload lands on next open).
   const includeCreate = onCreate !== undefined;
   const entries = React.useMemo(
+    // `generation` is the parent's signal that the registry changed under us
+    // — deleting a theme has to remove its tile.
     () => buildGridEntries(builtinOptions, { includeCreate }),
-    [builtinOptions, includeCreate],
+    [builtinOptions, includeCreate, generation],
   );
+  const [pending, setPending] = React.useState<PendingDelete | null>(null);
   const bands = React.useMemo(() => groupBands(entries), [entries]);
   // The ONLY order a flat focus index may refer to is the banded visual one.
   // Indexing `entries` here was the launch bug where selecting the tile
@@ -87,13 +106,36 @@ export function ThemeGrid({
     setFocusedIndex(i => moveIndex(rows, i, direction));
   };
 
+  // A key that is not `d` clears a pending confirmation rather than acting on
+  // it, so the only way to delete is to press d twice in a row on one tile.
+  const clearPending = (): boolean => {
+    if (pending === null) return false;
+    setPending(null);
+    return true;
+  };
+
   useKeybindings(
     {
-      'select:previous': () => move('up'),
-      'select:next': () => move('down'),
-      'select:previousValue': () => move('left'),
-      'select:nextValue': () => move('right'),
+      'select:previous': () => {
+        clearPending();
+        move('up');
+      },
+      'select:next': () => {
+        clearPending();
+        move('down');
+      },
+      'select:previousValue': () => {
+        clearPending();
+        move('left');
+      },
+      'select:nextValue': () => {
+        clearPending();
+        move('right');
+      },
       'select:accept': () => {
+        // Enter while confirming means "no" — selecting the theme you were
+        // about to delete would be a nasty surprise.
+        if (clearPending()) return;
         const entry = ordered[focusedIndex];
         if (entry === undefined) return;
         if (entry.special === 'create') {
@@ -102,10 +144,44 @@ export function ThemeGrid({
         }
         onSelect(entry.value);
       },
-      'select:cancel': () => onCancel(),
+      'select:cancel': () => {
+        // Esc backs out of the confirmation before it backs out of the picker.
+        if (clearPending()) return;
+        onCancel();
+      },
+      'theme:delete': () => {
+        const entry = ordered[focusedIndex];
+        if (entry === undefined || entry.special === 'create') return;
+
+        if (pending?.name === entry.value) {
+          setPending(null);
+          void onDelete?.(entry.value);
+          return;
+        }
+
+        const eligibility = canDeleteTheme(entry.value);
+        setPending(
+          eligibility.deletable
+            ? { name: entry.value, blocked: null }
+            : { name: entry.value, blocked: eligibility.reason },
+        );
+      },
     },
     { context: 'ThemePicker' },
   );
+
+  // Deleting the last tile in the grid leaves the focus index past the end.
+  // Same in-render correction the window start uses below.
+  if (focusedIndex >= ordered.length && ordered.length > 0) {
+    setFocusedIndex(ordered.length - 1);
+  }
+
+  const deleteHint = React.useMemo(() => {
+    if (onDelete === undefined || pending !== null) return null;
+    const entry = ordered[focusedIndex];
+    if (entry === undefined || entry.special === 'create') return null;
+    return canDeleteTheme(entry.value).deletable ? `d  delete “${entry.label}”` : null;
+  }, [onDelete, pending, ordered, focusedIndex]);
 
   // Window the rows so the focused one stays visible in the clipping modal.
   const rowHeights = rows.map(rowHeight);
@@ -148,6 +224,7 @@ export function ThemeGrid({
                 entry={entry}
                 focused={row.flatStart + i === focusedIndex}
                 selected={entry.value === currentSetting}
+                {...(pending?.name === entry.value ? { confirming: { blocked: pending.blocked } } : {})}
               />
             ))}
           </Box>
@@ -156,6 +233,15 @@ export function ThemeGrid({
       {hiddenBelow > 0 && (
         <Text dimColor>
           ↓ {hiddenBelow} more row{hiddenBelow === 1 ? '' : 's'}
+        </Text>
+      )}
+      {/* Taught here rather than only in the picker's footer: this is where
+          the user is looking, and it names the tile it would act on. Shown
+          only when the focused theme can actually be deleted, so the hint is
+          never an offer we would refuse. */}
+      {deleteHint !== null && (
+        <Text dimColor italic>
+          {deleteHint}
         </Text>
       )}
     </Box>

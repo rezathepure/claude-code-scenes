@@ -7,6 +7,7 @@ import { useRegisterKeybindingContext } from '../keybindings/KeybindingContext.j
 import { useKeybinding } from '../keybindings/useKeybinding.js';
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js';
 import { sceneLabelOf } from '../scene/label.js';
+import { removeTheme } from '../themes/remove.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
 import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
@@ -154,6 +155,10 @@ export function ThemePicker({
     // loaded theme files appear without a remount.
   }, []);
 
+  // Bumped after a delete so the grid rebuilds its tiles from the registry.
+  const [generation, bumpGeneration] = React.useReducer((n: number) => n + 1, 0);
+  const [deleteStatus, setDeleteStatus] = React.useState<string | null>(null);
+
   const content = (
     <Box flexDirection="column" gap={1}>
       <Box flexDirection="column" gap={1}>
@@ -173,6 +178,24 @@ export function ThemePicker({
             currentSetting={themeSetting}
             builtinOptions={builtinThemeOptions}
             onCreate={onCreate}
+            generation={generation}
+            onDelete={async name => {
+              const result = await removeTheme(name);
+              setDeleteStatus(result.message);
+              if (!result.ok) return;
+
+              // The preview may have been pointing at the theme that just
+              // stopped existing; drop it before the grid rebuilds.
+              cancelPreview();
+              // Deleting the theme you are USING would leave the setting
+              // naming something unregistered, which renders as the fallback
+              // palette with no explanation. Fall back explicitly instead.
+              if (name === themeSetting) {
+                updateSettingsForSource('userSettings', { theme: 'dark' });
+                onThemeSelect('dark' as ThemeSetting);
+              }
+              bumpGeneration();
+            }}
             onFocus={setting => {
               setPreviewTheme(setting);
             }}
@@ -261,6 +284,7 @@ export function ThemePicker({
                 : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`}
         </Text>
         {sceneHint !== null && <Text dimColor> {sceneHint}</Text>}
+        {deleteStatus !== null && <Text dimColor> {deleteStatus}</Text>}
       </Box>
       {failedThemes.length > 0 && (
         <Box flexDirection="column" marginTop={1}>
@@ -304,6 +328,8 @@ export function ThemePicker({
                 ) : (
                   <Byline>
                     <KeyboardShortcutHint shortcut="Enter" action="select" />
+                    {/* Only the grid binds it; the list picker has no focused tile to delete. */}
+                    {useGrid && <KeyboardShortcutHint shortcut="d" action="delete" />}
                     <KeyboardShortcutHint shortcut="Esc" action="cancel" />
                   </Byline>
                 )}

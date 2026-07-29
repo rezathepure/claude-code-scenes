@@ -4,6 +4,7 @@ import { getTheme } from '../../../utils/theme.js';
 import { registerThemeWithTraits, unregisterThemeWithTraits } from '../../../themes/register.js';
 import { renderToString } from '../../../utils/staticRender.js';
 import type { GridEntry } from '../layout.js';
+import { defaultRainParams } from '../../../scene/types.js';
 import { ThemeTile } from '../ThemeTile.js';
 
 const registered: string[] = [];
@@ -91,6 +92,63 @@ describe('ThemeTile', () => {
     expect(out).toContain('Enter to start');
     // None of the theme-tile mock content leaks into the promo tile.
     expect(out).not.toContain('❯ Read');
+    expect(out).not.toContain('12k tokens');
+  });
+});
+
+describe('the delete confirmation', () => {
+  test('asks inside the tile, naming the theme it would destroy', async () => {
+    // In place rather than in a bar below the grid: the thing being destroyed
+    // should be the thing you are looking at while you decide.
+    const out = await renderToString(
+      <ThemeTile
+        entry={makeEntry({ value: 'mine' as GridEntry['value'], label: 'mine', origin: 'cc' })}
+        focused
+        selected={false}
+        confirming={{ blocked: null }}
+      />,
+      40,
+    );
+    expect(out).toContain('Delete this theme?');
+    expect(out).toContain('mine'); // the tile header still names it
+    expect(out).toContain('d');
+    expect(out).toContain('Esc to keep it');
+  });
+
+  test('explains a refusal instead of asking a question it cannot honour', async () => {
+    const out = await renderToString(
+      <ThemeTile entry={makeEntry({})} focused selected={false} confirming={{ blocked: '“dark” is built in.' }} />,
+      40,
+    );
+    expect(out).toContain('Cannot delete');
+    expect(out).toContain('built in');
+    expect(out).not.toContain('again to delete');
+  });
+
+  test('hides the scene preview while confirming', async () => {
+    // The tile has four inner rows; the confirmation needs all of them.
+    registerThemeWithTraits('test-only-confirm', getTheme('dark'), 'dark', {
+      kind: 'rain',
+      params: defaultRainParams(),
+    });
+    registered.push('test-only-confirm');
+
+    const out = await renderToString(
+      <ThemeTile
+        entry={makeEntry({
+          value: 'test-only-confirm' as GridEntry['value'],
+          paletteName: 'dark',
+          label: 'test-only-confirm',
+          sceneLabel: 'rain',
+          origin: 'cc',
+        })}
+        focused
+        selected={false}
+        confirming={{ blocked: null }}
+      />,
+      40,
+    );
+    expect(out).toContain('Delete');
     expect(out).not.toContain('12k tokens');
   });
 });

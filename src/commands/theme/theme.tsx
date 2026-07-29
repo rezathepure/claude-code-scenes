@@ -9,8 +9,8 @@ import { useKeybinding } from '../../keybindings/useKeybinding.js';
 import type { LocalJSXCommandCall } from '../../types/command.js';
 import { getTheme, isKnownTheme, isReservedThemeName } from '../../utils/theme.js';
 import { getThemeMeta, getThemeOrigin } from '../../themes/meta.js';
-import { unregisterThemeWithTraits } from '../../themes/register.js';
-import { deleteThemeFile, exportTheme } from '../../themes/save.js';
+import { hiddenThemeNames, removeTheme, restoreTheme } from '../../themes/remove.js';
+import { exportTheme } from '../../themes/save.js';
 import { parseThemeArgs } from './parseArgs.js';
 import { ThemeCreator } from './ThemeCreator.js';
 
@@ -182,39 +182,33 @@ async function handleExport(source: string, onDone: Props['onDone']): Promise<vo
   );
 }
 
-/** Deletes a user theme file — but only one of OURS. */
+/**
+ * Deletes a user theme file — but only one of OURS.
+ *
+ * The policy itself lives in themes/remove.ts, shared with the grid's delete
+ * key: two copies would drift, and the grid would end up offering to delete
+ * something this command refuses.
+ */
 async function handleDelete(name: string, onDone: Props['onDone']): Promise<void> {
-  if (isReservedThemeName(name)) {
-    onDone(`“${name}” is built in and cannot be deleted.`, { display: 'system' });
+  const result = await removeTheme(name);
+  onDone(result.message, { display: 'system' });
+}
+
+/**
+ * Brings back a bundled theme the user deleted.
+ *
+ * Deleting one only records the name — there is no file to restore — so this
+ * is the whole undo. Without it a shipped theme would be gone for good, which
+ * is too sharp an edge for a key you can press by accident.
+ */
+function handleRestore(name: string, onDone: Props['onDone']): void {
+  if (!restoreTheme(name)) {
+    onDone(`“${name}” is not a deleted theme. Deleted: ${hiddenThemeNames().join(', ') || 'none'}.`, {
+      display: 'system',
+    });
     return;
   }
-  if (!isKnownTheme(name)) {
-    onDone(`No theme called “${name}”.`, { display: 'system' });
-    return;
-  }
-
-  switch (getThemeOrigin(name)) {
-    case 'bundled':
-      onDone(
-        `“${name}” ships with cc-themes and cannot be deleted. Run /theme export ${name} to make an editable copy.`,
-        { display: 'system' },
-      );
-      return;
-    case 'official':
-      onDone(
-        `“${name}” is managed by official Claude Code in ~/.claude/themes — delete it there, or run /theme export ${name} to copy it into ~/.claude/cc-themes as an editable cc theme.`,
-        { display: 'system' },
-      );
-      return;
-    default:
-      break;
-  }
-
-  const result = await deleteThemeFile(name);
-  if (result.ok) {
-    unregisterThemeWithTraits(name);
-  }
-  onDone(result.ok ? `Deleted “${name}”.` : result.error, { display: 'system' });
+  onDone(`Restored “${name}”. Restart to see it in /theme.`, { display: 'system' });
 }
 
 export const call: LocalJSXCommandCall = async (onDone, _context, args) => {
@@ -228,6 +222,9 @@ export const call: LocalJSXCommandCall = async (onDone, _context, args) => {
       return null;
     case 'delete':
       await handleDelete(parsed.name, onDone);
+      return null;
+    case 'restore':
+      handleRestore(parsed.name, onDone);
       return null;
     case 'error':
       onDone(parsed.message, { display: 'system' });

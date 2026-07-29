@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { getTheme, isKnownTheme } from '../../utils/theme.js'
 import { THEME_SCHEMA_FILENAME } from '../jsonSchema.js'
 import {
-  getCcThemesDir,
+  getCctThemesDir,
   getOfficialThemesDir,
   loadUserThemes,
   resetLoadedThemeTracking,
@@ -22,7 +22,7 @@ beforeEach(async () => {
   tempDir = await mkdtemp(join(tmpdir(), 'cc-themes-dirs-'))
   process.env.CLAUDE_CONFIG_DIR = tempDir
   await mkdir(getOfficialThemesDir(), { recursive: true })
-  await mkdir(getCcThemesDir(), { recursive: true })
+  await mkdir(getCctThemesDir(), { recursive: true })
 })
 
 afterEach(async () => {
@@ -49,7 +49,7 @@ async function load(): Promise<Awaited<ReturnType<typeof loadUserThemes>>> {
 describe('loading from both directories', () => {
   test('merges cc and official themes with correct origins', async () => {
     await writeFile(
-      join(getCcThemesDir(), 'test-only-ours.json'),
+      join(getCctThemesDir(), 'test-only-ours.json'),
       JSON.stringify({ mode: 'dark', colors: { claude: 'rgb(9,9,9)' } }),
     )
     await writeFile(
@@ -93,7 +93,7 @@ describe('loading from both directories', () => {
       JSON.stringify({ name: 'x', base: 'light', overrides: {} }),
     )
     await writeFile(
-      join(getCcThemesDir(), 'test-only-shadow.json'),
+      join(getCctThemesDir(), 'test-only-shadow.json'),
       JSON.stringify({ mode: 'dark', colors: { claude: 'rgb(7,7,7)' } }),
     )
 
@@ -126,7 +126,7 @@ describe('loading from both directories', () => {
     // Give the fire-and-forget schema write a beat to land.
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    expect(await readdir(getCcThemesDir())).toContain(THEME_SCHEMA_FILENAME)
+    expect(await readdir(getCctThemesDir())).toContain(THEME_SCHEMA_FILENAME)
     expect(await readdir(getOfficialThemesDir())).not.toContain(
       THEME_SCHEMA_FILENAME,
     )

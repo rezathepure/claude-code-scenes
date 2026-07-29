@@ -133,6 +133,11 @@ export {
   ENTER_ALT_SCREEN,
   ENABLE_MOUSE_TRACKING,
 } from './core/termio/dec.js'
+export {
+  ModalContext,
+  useIsInsideModal,
+  useModalScrollRef,
+} from './theme/modalContext.js'
 export type { SceneGlyph, SceneModel } from './core/scene-pass.js'
 export {
   MAX_CELLS_ABSOLUTE,

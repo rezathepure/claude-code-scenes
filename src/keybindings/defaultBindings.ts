@@ -211,6 +211,9 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
       right: 'select:nextValue',
       enter: 'select:accept',
       escape: 'select:cancel',
+      // Delete the focused theme. Confirmed in place, so a stray press is
+      // never destructive on its own.
+      d: 'theme:delete',
     },
   },
   {
