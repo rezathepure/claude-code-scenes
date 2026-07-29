@@ -87,6 +87,7 @@ describe('the bundled themes are classified correctly', () => {
     ['matrix', 'dark'],
     ['sakura', 'dark'],
     ['parchment', 'light'],
+    ['voltage', 'dark'],
   ]
 
   test('covers every bundled theme', () => {

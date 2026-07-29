@@ -134,6 +134,11 @@ export {
   ENABLE_MOUSE_TRACKING,
 } from './core/termio/dec.js'
 export type { SceneGlyph, SceneModel } from './core/scene-pass.js'
+export {
+  MAX_CELLS_ABSOLUTE,
+  MAX_CELLS_FRACTION,
+  sceneCellBudget,
+} from './core/scene-pass.js'
 export { default as instances } from './core/instances.js'
 export {
   default as renderBorder,

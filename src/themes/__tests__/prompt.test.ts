@@ -1,4 +1,12 @@
 import { describe, expect, test } from 'bun:test'
+import { FUNCTIONS } from '../../scene/expr/index.js'
+import { GLYPH_CATALOG_NAMES } from '../../scene/glyphs.js'
+import {
+  FADE_MODES,
+  FIELD_PARAMS,
+  MOTION_VERBS,
+  PATH_VERBS,
+} from '../../scene/grammar.js'
 import matrix from '../bundled/matrix.json'
 import {
   buildThemeSystemPrompt,
@@ -56,17 +64,78 @@ describe('worked examples', () => {
     expect(prompt).toContain(matrix.description)
   })
 
-  test('show both reference themes, so the discipline generalises', () => {
-    // One example teaches "green themes look like this". Two different moods
-    // following the same rules teach the rules.
+  test('show three reference themes, so the discipline generalises', () => {
+    // One example teaches "green themes look like this". Several different
+    // moods following the same rules teach the rules. Voltage is the one that
+    // demonstrates a composed scene rather than a legacy preset.
     expect(prompt).toContain('### matrix')
     expect(prompt).toContain('### sakura')
+    expect(prompt).toContain('### voltage')
   })
 
   test('stay small enough to be worth sending', () => {
-    // Rough token estimate; guards against the prompt quietly growing into
-    // something expensive on every generation.
-    expect(prompt.length / 4).toBeLessThan(4000)
+    // Raised from 4000 when the scene section stopped being a three-item menu
+    // and became a vocabulary. The generation is user-initiated and one-shot,
+    // input tokens are far cheaper than output, and the difference between
+    // "pick one of two primitives" and "design an animation" is the feature.
+    expect(prompt.length / 4).toBeLessThan(6000)
+  })
+
+  test('keep the scene section to its own budget', () => {
+    // A separate ceiling so future growth is attributed to the right section
+    // instead of silently eating the global headroom.
+    const start = prompt.indexOf('## The animation')
+    const end = prompt.indexOf('## Worked examples')
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    expect((end - start) / 4).toBeLessThan(3000)
+  })
+})
+
+describe('the scene vocabulary', () => {
+  test('documents every motion, path and fade the loader accepts', () => {
+    // Adding a verb without documenting it makes it unreachable: the model
+    // never learns the name, so it never uses it. This fails instead.
+    for (const verb of [...MOTION_VERBS, ...PATH_VERBS, ...FADE_MODES]) {
+      expect(prompt).toContain(`\`${verb.name}\``)
+    }
+  })
+
+  test('documents every glyph catalog', () => {
+    for (const name of GLYPH_CATALOG_NAMES) {
+      expect(prompt).toContain(`\`${name}\``)
+    }
+  })
+
+  test('documents every function the expression sandbox allows', () => {
+    // The whitelist and its documentation are the same list or the model
+    // guesses, and a guess costs a whole generation.
+    for (const name of FUNCTIONS.keys()) {
+      expect(prompt).toContain(`\`${name}\``)
+    }
+  })
+
+  test('takes its numbers from the tables the loader clamps against', () => {
+    const intensity = FIELD_PARAMS.intensity
+    if (intensity.type !== 'number') throw new Error('intensity is not numeric')
+    expect(prompt).toContain(`${intensity.min}–${intensity.max}`)
+  })
+
+  test('no longer maps moods onto a primitive', () => {
+    // The bug this feature exists to fix: the prompt used to say rain "fits
+    // electric, cyber, stormy, hacker, neon moods", so asking for "cyberpunk"
+    // produced matrix's rain in purple, every time. The presets still appear
+    // in the worked examples — they are real shorthands — but nothing routes
+    // a mood to one any more.
+    for (const mapping of [
+      'Fits electric',
+      'Fits organic',
+      'cyber, stormy, hacker, neon',
+      'floral, snowy, autumnal',
+    ]) {
+      expect(prompt).not.toContain(mapping)
+    }
+    expect(prompt).toContain('from the idea, not from a')
   })
 })
 

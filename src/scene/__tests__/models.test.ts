@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { stringWidth } from '@anthropic/ink'
 import { derivePetalStyles, deriveRainStyles } from '../colors.js'
-import { createPetalsModel } from '../petals.js'
-import { createRainModel } from '../rain.js'
+import { createFieldModel } from '../field.js'
+import { petalsPreset, rainPreset } from '../presets.js'
 import { mulberry32 } from '../rng.js'
 import {
   defaultPetalsParams,
@@ -12,7 +12,7 @@ import {
 } from '../types.js'
 
 const RAIN_STYLES = { head: 2, ramp: [4, 6, 8, 10, 12, 14] }
-const PETAL_STYLES = { tints: [2, 4, 6, 8] }
+const PETAL_STYLES = { head: 2, ramp: [2, 4, 6, 8] }
 
 describe('glyph alphabets', () => {
   test('every rain glyph is width 1', () => {
@@ -31,8 +31,16 @@ describe('glyph alphabets', () => {
 
 describe('rain model', () => {
   test('is deterministic under a seeded rng', () => {
-    const a = createRainModel(defaultRainParams(), RAIN_STYLES, mulberry32(7))
-    const b = createRainModel(defaultRainParams(), RAIN_STYLES, mulberry32(7))
+    const a = createFieldModel(
+      rainPreset(defaultRainParams()),
+      RAIN_STYLES,
+      mulberry32(7),
+    )
+    const b = createFieldModel(
+      rainPreset(defaultRainParams()),
+      RAIN_STYLES,
+      mulberry32(7),
+    )
     a.resize(80, 24)
     b.resize(80, 24)
     for (let i = 0; i < 50; i++) {
@@ -44,14 +52,22 @@ describe('rain model', () => {
 
   test('cells are stable between ticks', () => {
     // React renders between ticker ticks must repaint the identical frame.
-    const m = createRainModel(defaultRainParams(), RAIN_STYLES, mulberry32(1))
+    const m = createFieldModel(
+      rainPreset(defaultRainParams()),
+      RAIN_STYLES,
+      mulberry32(1),
+    )
     m.resize(80, 24)
     m.tick()
     expect(m.cells()).toBe(m.cells()) // same array identity, not just equal
   })
 
   test('all cells stay in bounds across 1000 ticks', () => {
-    const m = createRainModel(defaultRainParams(), RAIN_STYLES, mulberry32(3))
+    const m = createFieldModel(
+      rainPreset(defaultRainParams()),
+      RAIN_STYLES,
+      mulberry32(3),
+    )
     m.resize(60, 20)
     for (let i = 0; i < 1000; i++) {
       m.tick()
@@ -65,20 +81,24 @@ describe('rain model', () => {
   })
 
   test('keeps raining forever (drops respawn)', () => {
-    const m = createRainModel(defaultRainParams(), RAIN_STYLES, mulberry32(5))
+    const m = createFieldModel(
+      rainPreset(defaultRainParams()),
+      RAIN_STYLES,
+      mulberry32(5),
+    )
     m.resize(40, 12)
     for (let i = 0; i < 500; i++) m.tick()
     expect(m.cells().length).toBeGreaterThan(0)
   })
 
   test('density scales the number of drops', () => {
-    const sparse = createRainModel(
-      { ...defaultRainParams(), density: 0.05 },
+    const sparse = createFieldModel(
+      rainPreset({ ...defaultRainParams(), density: 0.05 }),
       RAIN_STYLES,
       mulberry32(9),
     )
-    const dense = createRainModel(
-      { ...defaultRainParams(), density: 1 },
+    const dense = createFieldModel(
+      rainPreset({ ...defaultRainParams(), density: 1 }),
       RAIN_STYLES,
       mulberry32(9),
     )
@@ -88,7 +108,11 @@ describe('rain model', () => {
   })
 
   test('heads use the head style, trails use the ramp', () => {
-    const m = createRainModel(defaultRainParams(), RAIN_STYLES, mulberry32(2))
+    const m = createFieldModel(
+      rainPreset(defaultRainParams()),
+      RAIN_STYLES,
+      mulberry32(2),
+    )
     m.resize(80, 24)
     const styles = new Set(m.cells().map(c => c.styleId))
     expect(styles.has(RAIN_STYLES.head)).toBe(true)
@@ -96,7 +120,11 @@ describe('rain model', () => {
   })
 
   test('resize resets to the new dimensions', () => {
-    const m = createRainModel(defaultRainParams(), RAIN_STYLES, mulberry32(4))
+    const m = createFieldModel(
+      rainPreset(defaultRainParams()),
+      RAIN_STYLES,
+      mulberry32(4),
+    )
     m.resize(200, 50)
     m.tick()
     m.resize(20, 5)
@@ -109,13 +137,13 @@ describe('rain model', () => {
 
 describe('petals model', () => {
   test('is deterministic under a seeded rng', () => {
-    const a = createPetalsModel(
-      defaultPetalsParams(),
+    const a = createFieldModel(
+      petalsPreset(defaultPetalsParams()),
       PETAL_STYLES,
       mulberry32(7),
     )
-    const b = createPetalsModel(
-      defaultPetalsParams(),
+    const b = createFieldModel(
+      petalsPreset(defaultPetalsParams()),
       PETAL_STYLES,
       mulberry32(7),
     )
@@ -129,8 +157,8 @@ describe('petals model', () => {
   })
 
   test('all cells stay in bounds across 1000 ticks', () => {
-    const m = createPetalsModel(
-      defaultPetalsParams(),
+    const m = createFieldModel(
+      petalsPreset(defaultPetalsParams()),
       PETAL_STYLES,
       mulberry32(3),
     )
@@ -147,8 +175,8 @@ describe('petals model', () => {
   })
 
   test('petals tumble through the glyph cycle over time', () => {
-    const m = createPetalsModel(
-      defaultPetalsParams(),
+    const m = createFieldModel(
+      petalsPreset(defaultPetalsParams()),
       PETAL_STYLES,
       mulberry32(11),
     )
@@ -165,8 +193,8 @@ describe('petals model', () => {
   })
 
   test('keeps drifting forever (petals respawn)', () => {
-    const m = createPetalsModel(
-      defaultPetalsParams(),
+    const m = createFieldModel(
+      petalsPreset(defaultPetalsParams()),
       PETAL_STYLES,
       mulberry32(5),
     )
