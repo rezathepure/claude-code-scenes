@@ -12,6 +12,7 @@ import {
   flattenBands,
   groupBands,
   moveIndex,
+  previewTargetFor,
   rowHeight,
   rowIndexOf,
   TILE_HEIGHT,
@@ -96,13 +97,12 @@ export function ThemeGrid({
   });
   const [windowStart, setWindowStart] = React.useState(0);
 
-  // The create banner has no theme of its own, so focusing it previews the
-  // theme you are actually using. It used to hold whatever you last arrowed
-  // past, which meant the create screen opened under matrix's rain — reading
-  // as though the theme you were about to design already existed.
+  // Focusing the create banner previews a blank canvas (see previewTargetFor).
+  // The describe screen that follows inherits it — the picker unmounts but the
+  // preview lives in the ThemeProvider — so the canvas carries through the
+  // whole create flow.
   const focusedEntry = ordered[focusedIndex];
-  const focusedValue =
-    focusedEntry !== undefined && focusedEntry.special === undefined ? focusedEntry.value : currentSetting;
+  const focusedValue = previewTargetFor(focusedEntry, currentSetting);
 
   React.useEffect(() => {
     onFocus(focusedValue);

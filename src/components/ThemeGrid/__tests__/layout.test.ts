@@ -14,6 +14,7 @@ import {
   type GridEntry,
   groupBands,
   moveIndex,
+  previewTargetFor,
   rowHeight,
   rowIndexOf,
 } from '../layout.js'
@@ -285,5 +286,50 @@ describe('buildGridEntries', () => {
     expect(rows[0]!.entries.map(e => e.value)).toEqual([CREATE_TILE_VALUE])
     expect(rows[0]!.header).toBeUndefined()
     expect(rows[1]!.entries).toHaveLength(2)
+  })
+})
+
+describe('previewTargetFor', () => {
+  const create = buildGridEntries(BUILTINS, { includeCreate: true }).at(-1)!
+
+  test('a theme tile previews itself', () => {
+    expect(previewTargetFor(entry({ value: 'matrix' }), 'sakura')).toBe(
+      'matrix',
+    )
+  })
+
+  test('the create banner previews a still palette, not the theme in use', () => {
+    // The reported bug: opening /theme from matrix drew "Create your own" — and
+    // then the whole design screen — under matrix's falling rain.
+    for (const from of ['matrix', 'sakura', 'test-only-unknown'] as const) {
+      expect({ from, preview: previewTargetFor(create, from) }).toEqual({
+        from,
+        preview: 'dark',
+      })
+    }
+  })
+
+  test('the canvas follows the mode of a light theme', () => {
+    registerThemeWithTraits(
+      'test-only-light-vibe',
+      getTheme('light'),
+      'light',
+      undefined,
+      { origin: 'cc' },
+    )
+    registered.push('test-only-light-vibe')
+    // We never paint a background, so a dark canvas on a light terminal is
+    // grey text on white.
+    expect(previewTargetFor(create, 'test-only-light-vibe')).toBe('light')
+  })
+
+  test('the canvas keeps an accessible built-in already in use', () => {
+    for (const from of ['dark-daltonized', 'light-ansi', 'auto'] as const) {
+      expect(previewTargetFor(create, from)).toBe(from)
+    }
+  })
+
+  test('survives focus landing past the end, as it does after a delete', () => {
+    expect(previewTargetFor(undefined, 'matrix')).toBe('dark')
   })
 })

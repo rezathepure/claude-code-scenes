@@ -1,9 +1,10 @@
-import { Box, Text, usePreviewTheme, useTheme } from '@anthropic/ink';
+import { Box, Text, usePreviewTheme, useTheme, useThemeSetting } from '@anthropic/ink';
 import * as React from 'react';
 import { Select } from '../../components/CustomSelect/index.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { StructuredDiff } from '../../components/StructuredDiff.js';
 import { Spinner } from '../../components/Spinner.js';
+import { canvasThemeFor } from '../../themes/canvas.js';
 import { generateTheme } from '../../themes/generate/generate.js';
 import { registerThemeWithTraits, unregisterThemeWithTraits } from '../../themes/register.js';
 import { findAvailableThemeName, saveGeneratedTheme } from '../../themes/save.js';
@@ -53,10 +54,40 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
   const [phase, setPhase] = React.useState<Phase>({ kind: 'generating' });
   const { columns } = useTerminalSize();
   const [, setTheme] = useTheme();
+  const themeSetting = useThemeSetting();
   const { setPreviewTheme, savePreview, cancelPreview } = usePreviewTheme();
+
+  // Resolved once, at mount: the canvas describes the theme you arrived with,
+  // and recomputing it after `keep` (which changes themeSetting) would put a
+  // moving value in the generation effect's deps.
+  const [canvas] = React.useState(() => canvasThemeFor(themeSetting));
+
+  // ThemeProvider builds its context value with useMemo(..., [previewTheme,
+  // …]), so every one of these functions gets a fresh identity each time the
+  // preview changes. An effect that both depends on setPreviewTheme AND calls
+  // it re-runs itself: the generation effect previewed its own result and was
+  // immediately torn down and restarted, spending a second design call on
+  // every attempt. Reading them through a ref keeps the effect keyed to the
+  // things that actually change what gets generated.
+  const previewRef = React.useRef({ setPreviewTheme, cancelPreview });
+  previewRef.current = { setPreviewTheme, cancelPreview };
 
   // Name is chosen once so retries and the final save agree.
   const nameRef = React.useRef<string | null>(null);
+
+  // Set once the user says keep, so the unmount cleanup below leaves the
+  // preview alone — by then it is a choice rather than a preview.
+  const keptRef = React.useRef(false);
+
+  React.useEffect(
+    () => () => {
+      // Anything that unmounts this panel without a decision — Esc, another
+      // command taking the slot — would otherwise leave the app wearing the
+      // canvas or a half-judged attempt. Neither is what the user chose.
+      if (!keptRef.current) previewRef.current.cancelPreview();
+    },
+    [],
+  );
 
   // Bumped to ask for another attempt. Each generation is independent, so a
   // retry is a fresh design rather than a refinement of the last one.
@@ -65,6 +96,11 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
   React.useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
+
+    // Design on the canvas, not on the theme being replaced. "Designing a
+    // theme for cyberpunk…" over matrix's rain reads as though it is already
+    // done; against a neutral palette the reveal actually lands.
+    previewRef.current.setPreviewTheme(canvas);
 
     void (async () => {
       const name = nameRef.current ?? findAvailableThemeName(themeNameFromDescription(description));
@@ -82,7 +118,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       // numbers — scene included, so in fullscreen the backdrop animates
       // during review too. Unregistered again if they decline.
       registerThemeWithTraits(name, result.colors as unknown as Theme, result.mode, result.scene);
-      setPreviewTheme(name);
+      previewRef.current.setPreviewTheme(name);
 
       setPhase({
         kind: 'review',
@@ -100,7 +136,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       cancelled = true;
       controller.abort();
     };
-  }, [description, setPreviewTheme, attempt]);
+  }, [description, attempt, canvas]);
 
   if (phase.kind === 'generating') {
     return (
@@ -173,6 +209,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
             return;
           }
           if (choice === 'keep') {
+            keptRef.current = true;
             void (async () => {
               const saved = await saveGeneratedTheme(phase.name, {
                 mode: phase.mode,

@@ -6,6 +6,7 @@
 
 import { getSceneConfig } from '../../scene/registry.js'
 import { sceneLabelOf } from '../../scene/label.js'
+import { canvasThemeFor } from '../../themes/canvas.js'
 import { getThemeMeta, type ThemeOrigin } from '../../themes/meta.js'
 import {
   getRegisteredThemeNames,
@@ -119,6 +120,26 @@ export function buildGridEntries(
   }
 
   return entries
+}
+
+/**
+ * The theme focusing an entry should preview across the whole app.
+ *
+ * A theme tile previews itself — that is what the picker is for. The create
+ * banner has nothing to preview yet, so it shows a blank canvas instead. The
+ * two obvious alternatives both mislead: whatever you last arrowed past
+ * leaves the create screen wearing a theme at random, and the theme you are
+ * currently using puts matrix's rain behind an invitation to design a theme.
+ * Either reads as though the thing you are about to describe already exists.
+ */
+export function previewTargetFor(
+  entry: GridEntry | undefined,
+  current: ThemeSetting,
+): ThemeSetting {
+  if (entry === undefined || entry.special !== undefined) {
+    return canvasThemeFor(current)
+  }
+  return entry.value
 }
 
 const BAND_TITLES: Record<GridBandKey, string> = {
