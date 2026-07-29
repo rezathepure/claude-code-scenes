@@ -31,6 +31,8 @@ export type GridEntry = {
    * composed scene has no single `kind` to print, so the model names it.
    */
   sceneLabel: string | null
+  /** The theme's own one-line description, when it has one. */
+  description?: string
   origin: ThemeOrigin
   /**
    * A tile that is not a theme. 'create' is the "design your own" promo tile:
@@ -43,7 +45,12 @@ export type GridEntry = {
 /** Sentinel value for the create tile — never a real theme name. */
 export const CREATE_TILE_VALUE = '__create-theme__' as ThemeSetting
 
-export type GridBandKey = 'animated' | 'builtin' | 'custom' | 'official'
+export type GridBandKey =
+  | 'create'
+  | 'animated'
+  | 'builtin'
+  | 'custom'
+  | 'official'
 export type GridBand = { key: GridBandKey; title: string; entries: GridEntry[] }
 export type GridRow = {
   /** Band title, present on the band's first row only. */
@@ -90,13 +97,16 @@ export function buildGridEntries(
       label: name,
       mode: meta?.mode ?? 'dark',
       sceneLabel: sceneLabelOf(getSceneConfig(name)),
+      ...(meta?.description !== undefined
+        ? { description: meta.description }
+        : {}),
       origin: meta?.origin ?? 'cc',
     })
   }
 
   if (opts?.includeCreate) {
-    // Appended last so it closes the Animated band (bandKeyFor sends it
-    // there): the two showcase themes lead, the invitation follows.
+    // Position in this list does not matter: bandKeyFor puts it in the
+    // 'create' band, which groupBands orders first.
     entries.push({
       value: CREATE_TILE_VALUE,
       paletteName: 'dark',
@@ -112,6 +122,8 @@ export function buildGridEntries(
 }
 
 const BAND_TITLES: Record<GridBandKey, string> = {
+  // No header: the banner is its own headline.
+  create: '',
   animated: '✦ Animated',
   builtin: 'Built-in',
   custom: 'Custom',
@@ -119,9 +131,10 @@ const BAND_TITLES: Record<GridBandKey, string> = {
 }
 
 function bandKeyFor(entry: GridEntry): GridBandKey {
-  // The create tile lives with the animated themes: they are the pitch, it
-  // is the call to action.
-  if (entry.special === 'create') return 'animated'
+  // Its own band, above everything. It used to close the Animated band,
+  // where it read as one more theme among several; leading the grid full
+  // width is what makes it an invitation rather than an option.
+  if (entry.special === 'create') return 'create'
   // Animation trumps origin: matrix and sakura lead the picker — they are
   // the product — wherever they come from.
   if (entry.sceneLabel !== null) return 'animated'
@@ -133,7 +146,13 @@ function bandKeyFor(entry: GridEntry): GridBandKey {
 
 /** Groups entries into ordered bands; empty bands are omitted. */
 export function groupBands(entries: GridEntry[]): GridBand[] {
-  const order: GridBandKey[] = ['animated', 'builtin', 'custom', 'official']
+  const order: GridBandKey[] = [
+    'create',
+    'animated',
+    'builtin',
+    'custom',
+    'official',
+  ]
   const byKey = new Map<GridBandKey, GridEntry[]>()
   for (const entry of entries) {
     const key = bandKeyFor(entry)
@@ -218,12 +237,17 @@ export function buildRows(bands: GridBand[], columnCount: number): GridRow[] {
   const rows: GridRow[] = []
   let flat = 0
   for (const band of bands) {
-    for (let i = 0; i < band.entries.length; i += columnCount) {
+    // The create banner spans the full grid width, so it is always alone on
+    // its row whatever the column count.
+    const perRow = band.key === 'create' ? 1 : columnCount
+    for (let i = 0; i < band.entries.length; i += perRow) {
       const row: GridRow = {
-        entries: band.entries.slice(i, i + columnCount),
+        entries: band.entries.slice(i, i + perRow),
         flatStart: flat,
       }
-      if (i === 0) row.header = band.title
+      // Empty title (the create banner) means no header row at all —
+      // rowHeight keys off header presence, so it must not be set to ''.
+      if (i === 0 && band.title !== '') row.header = band.title
       rows.push(row)
       flat += row.entries.length
     }

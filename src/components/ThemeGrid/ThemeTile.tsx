@@ -75,6 +75,21 @@ function sceneChip(entry: GridEntry): string {
   return room >= 4 ? `${label.slice(0, room - 1)}…` : '';
 }
 
+/**
+ * A description shortened to the two rows the tile gives it.
+ *
+ * The Box clips anyway, but clipping alone stops mid-word with no sign that
+ * anything was cut. Trimming to the last whole word and adding an ellipsis
+ * reads as a summary rather than damage.
+ */
+function fitDescription(text: string): string {
+  const room = TILE_INNER_WIDTH * 2;
+  if (text.length <= room) return text;
+  const cut = text.slice(0, room - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > room / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
 /** The create tile's fixed chrome: Claude Orange on neutral greys. */
 const CREATE_ACCENT = 'rgb(215,119,87)';
 const CREATE_ACCENT_BRIGHT = 'rgb(255,168,130)';
@@ -87,10 +102,19 @@ const CREATE_DIM = 'rgb(150,150,150)';
  * this one reads as the invitation. When focused it behaves like any tile —
  * double border, pulsing ring.
  */
-function CreateTile({ focused, focusRing }: { focused: boolean; focusRing: string }): React.ReactNode {
+function CreateTile({
+  focused,
+  focusRing,
+  width,
+}: {
+  focused: boolean;
+  focusRing: string;
+  /** Full grid width — the banner spans every column. */
+  width: number;
+}): React.ReactNode {
   return (
     <Box
-      width={TILE_WIDTH}
+      width={width}
       height={7}
       flexDirection="column"
       flexShrink={0}
@@ -106,18 +130,25 @@ function CreateTile({ focused, focusRing }: { focused: boolean; focusRing: strin
         </Text>
       </Box>
       <Box height={1}>
-        <Text color={CREATE_ACCENT_BRIGHT as Color}> · ✧ ✦ ·</Text>
-      </Box>
-      <Box height={1}>
         <Text wrap="truncate-end">
           <Text color={CREATE_ACCENT_BRIGHT as Color} italic>
             “neon tokyo rainstorm”
+          </Text>
+          <Text color={CREATE_DIM as Color}> · </Text>
+          <Text color={CREATE_ACCENT_BRIGHT as Color} italic>
+            “a spider on a silk thread”
+          </Text>
+          <Text color={CREATE_DIM as Color}> · </Text>
+          <Text color={CREATE_ACCENT_BRIGHT as Color} italic>
+            “autumn library at dusk”
           </Text>
         </Text>
       </Box>
       <Box height={1}>
         <Text wrap="truncate-end">
-          <Text color={CREATE_TEXT as Color}>→ a theme, alive</Text>
+          <Text color={CREATE_TEXT as Color}>
+            Describe anything. Claude designs the palette and the animation to match.
+          </Text>
         </Text>
       </Box>
       <Box height={1}>
@@ -132,12 +163,15 @@ function ThemeTileInner({
   focused,
   selected,
   confirming,
+  bannerWidth,
 }: {
   entry: GridEntry;
   focused: boolean;
   selected: boolean;
   /** Set while `d` has been pressed on this tile; `blocked` explains a refusal. */
   confirming?: { blocked: string | null };
+  /** Width for the full-width create banner; ignored by theme tiles. */
+  bannerWidth?: number;
 }): React.ReactNode {
   // Double assertion per house style: palette values are rgb() strings, which
   // satisfy Color at runtime via the resolver's raw-value passthrough.
@@ -145,7 +179,7 @@ function ThemeTileInner({
   const focusRing = useFocusPulse(focused);
 
   if (entry.special === 'create') {
-    return <CreateTile focused={focused} focusRing={focusRing} />;
+    return <CreateTile focused={focused} focusRing={focusRing} width={bannerWidth ?? TILE_WIDTH} />;
   }
   const sceneConfig = getSceneConfig(entry.paletteName);
   const scene = sceneConfig.kind === 'none' ? null : sceneConfig;
@@ -183,25 +217,21 @@ function ThemeTileInner({
         <TileScene sceneConfig={scene} palette={t} width={TILE_INNER_WIDTH} height={4} />
       ) : (
         <>
+          {/* Swatches first so every tile has something under its title —
+              the built-ins carry no description, and two blank rows below a
+              heading reads as a broken tile. Then the theme's own
+              description, which is the one genuinely useful thing a tile can
+              say. The mock session these replaced ("Read src/app.ts",
+              "12k tokens") described work that was not happening and told you
+              nothing about the theme. */}
           <Box height={1}>
-            <Text wrap="truncate-end">
-              <Text color={t.claude}>❯ </Text>
-              <Text color={t.text}>Read </Text>
-              <Text color={t.permission}>src/app.ts</Text>
-            </Text>
+            <Swatches palette={t} />
           </Box>
-          <Box height={1}>
-            <Text wrap="truncate-end">
-              <Text color={t.diffAddedWord}>+ resolved()</Text>
-              <Text color={t.diffRemovedWord}> - legacy()</Text>
-            </Text>
-          </Box>
-          <Box height={1}>
-            <Text wrap="truncate-end">
-              <Text color={t.success}>● </Text>
-              <Text color={t.warning}>● </Text>
-              <Text color={t.error}>● </Text>
-              <Text color={t.inactive}>12k tokens</Text>
+          {/* overflow=hidden: a long description wraps to three lines and
+              would otherwise spill over the mode footer below it. */}
+          <Box height={2} overflow="hidden">
+            <Text wrap="wrap" color={t.inactive}>
+              {entry.description === undefined ? '' : fitDescription(entry.description)}
             </Text>
           </Box>
           <Box height={1}>
@@ -211,6 +241,27 @@ function ThemeTileInner({
         </>
       )}
     </Box>
+  );
+}
+
+/**
+ * The palette itself, in one row.
+ *
+ * Six slots chosen because they are what a theme is judged on: the signature
+ * accent, its shimmer twin, the tool accent, and the three semantic states
+ * that must stay tellable apart. Solid blocks rather than dots — a block
+ * shows the colour, a dot shows mostly background.
+ */
+function Swatches({ palette }: { palette: Record<string, Color> }): React.ReactNode {
+  const slots = ['claude', 'claudeShimmer', 'permission', 'success', 'warning', 'error'];
+  return (
+    <Text wrap="truncate-end">
+      {slots.map(slot => (
+        <Text key={slot} color={palette[slot]}>
+          ███{' '}
+        </Text>
+      ))}
+    </Text>
   );
 }
 

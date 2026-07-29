@@ -247,7 +247,7 @@ describe('buildGridEntries', () => {
     expect(rowHeight(rows[0]!)).toBe(8)
   })
 
-  test('the create tile is opt-in and closes the Animated band', () => {
+  test('the create tile is opt-in and leads the whole grid', () => {
     // Absent unless asked for — onboarding and /config show a plain grid.
     const plain = buildGridEntries(BUILTINS)
     expect(plain.some(e => e.special === 'create')).toBe(false)
@@ -260,15 +260,30 @@ describe('buildGridEntries', () => {
       label: 'Create your own',
     })
 
-    // The showcase themes lead the band; the invitation follows them.
+    // Its own band, first, above even the animated showcase themes — the
+    // invitation is the headline, not one more option among several.
     const bands = groupBands([
       entry({ value: 'test-only-rainy', sceneLabel: 'rain' }),
       create,
     ])
-    expect(bands[0]!.key).toBe('animated')
-    expect(bands[0]!.entries.map(e => e.value)).toEqual([
-      'test-only-rainy',
-      CREATE_TILE_VALUE,
-    ])
+    expect(bands[0]!.key).toBe('create')
+    expect(bands[0]!.entries.map(e => e.value)).toEqual([CREATE_TILE_VALUE])
+    expect(bands[1]!.key).toBe('animated')
+  })
+
+  test('the create banner takes a whole row, whatever the column count', () => {
+    // A four-column grid must not tuck three theme tiles alongside it.
+    const create = buildGridEntries(BUILTINS, { includeCreate: true }).at(-1)!
+    const rows = buildRows(
+      groupBands([
+        create,
+        entry({ value: 'a', sceneLabel: 'rain' }),
+        entry({ value: 'b', sceneLabel: 'rain' }),
+      ]),
+      4,
+    )
+    expect(rows[0]!.entries.map(e => e.value)).toEqual([CREATE_TILE_VALUE])
+    expect(rows[0]!.header).toBeUndefined()
+    expect(rows[1]!.entries).toHaveLength(2)
   })
 })

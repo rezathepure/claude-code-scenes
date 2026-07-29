@@ -27,14 +27,32 @@ function makeEntry(partial: Partial<GridEntry>): GridEntry {
 }
 
 describe('ThemeTile', () => {
-  test('renders label, mock rows and mode footer', async () => {
+  test('renders label, palette swatches and mode footer', async () => {
     const out = await renderToString(<ThemeTile entry={makeEntry({})} focused={false} selected={false} />, 40);
 
     expect(out).toContain('● Dark mode');
-    expect(out).toContain('❯ Read');
-    expect(out).toContain('+ resolved()');
-    expect(out).toContain('12k tokens');
+    expect(out).toContain('███');
     expect(out).toContain('dark');
+    // The mock session is gone: it described work that was not happening.
+    expect(out).not.toContain('resolved()');
+    expect(out).not.toContain('12k tokens');
+  });
+
+  test('shows a theme its own description instead of filler', async () => {
+    const out = await renderToString(
+      <ThemeTile
+        entry={makeEntry({
+          value: 'test-only-desc' as GridEntry['value'],
+          label: 'test-only-desc',
+          origin: 'cc',
+          description: 'Neon violet through acid rain',
+        })}
+        focused={false}
+        selected={false}
+      />,
+      40,
+    );
+    expect(out).toContain('Neon violet');
   });
 
   test('shows the scene kind suffix and the selected checkmark', async () => {

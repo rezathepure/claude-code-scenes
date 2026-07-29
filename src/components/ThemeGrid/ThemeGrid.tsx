@@ -15,6 +15,7 @@ import {
   rowHeight,
   rowIndexOf,
   TILE_HEIGHT,
+  TILE_WIDTH,
 } from './layout.js';
 import { ThemeTile } from './ThemeTile.js';
 
@@ -33,7 +34,7 @@ export type ThemeGridProps = {
   onFocus: (setting: ThemeSetting) => void;
   onSelect: (setting: ThemeSetting) => void;
   onCancel: () => void;
-  /** When provided, a "Create your own" tile joins the Animated band. */
+  /** When provided, the "Create your own" banner leads the grid. */
   onCreate?: () => void;
   /** When provided, `d` offers to delete the focused theme. */
   onDelete?: (name: ThemeSetting) => void | Promise<void>;
@@ -80,24 +81,31 @@ export function ThemeGrid({
   const ordered = React.useMemo(() => flattenBands(bands), [bands]);
   const size = useModalOrTerminalSize(useTerminalSize());
   const columnCount = Math.max(2, columnCountFor(size.columns));
+  // The create banner spans the same width the tile rows occupy, so the grid
+  // reads as one block rather than a wide bar over narrower cards.
+  const gridWidth = columnCount * TILE_WIDTH + (columnCount - 1);
   const rows = React.useMemo(() => buildRows(bands, columnCount), [bands, columnCount]);
 
   const [focusedIndex, setFocusedIndex] = React.useState(() => {
+    // Start on the create banner when there is one: it leads the grid, and
+    // opening the picker to a blinking invitation is the whole point of
+    // promoting it. The current theme is still marked with a ✓.
+    if (ordered[0]?.special === 'create') return 0;
     const found = ordered.findIndex(e => e.value === currentSetting);
     return found === -1 ? 0 : found;
   });
   const [windowStart, setWindowStart] = React.useState(0);
 
-  // The create tile has no theme to preview: focusing it keeps the previous
-  // preview in place rather than flashing back to the saved theme.
+  // The create banner has no theme of its own, so focusing it previews the
+  // theme you are actually using. It used to hold whatever you last arrowed
+  // past, which meant the create screen opened under matrix's rain — reading
+  // as though the theme you were about to design already existed.
   const focusedEntry = ordered[focusedIndex];
   const focusedValue =
-    focusedEntry !== undefined && focusedEntry.special === undefined ? focusedEntry.value : undefined;
+    focusedEntry !== undefined && focusedEntry.special === undefined ? focusedEntry.value : currentSetting;
 
   React.useEffect(() => {
-    if (focusedValue !== undefined) {
-      onFocus(focusedValue);
-    }
+    onFocus(focusedValue);
     // onFocus identity is unstable at call sites; firing on focus change only
     // is the contract (same as Select's onFocus).
   }, [focusedValue]);
@@ -177,10 +185,10 @@ export function ThemeGrid({
   }
 
   const deleteHint = React.useMemo(() => {
-    if (onDelete === undefined || pending !== null) return null;
+    if (onDelete === undefined || pending !== null) return '';
     const entry = ordered[focusedIndex];
-    if (entry === undefined || entry.special === 'create') return null;
-    return canDeleteTheme(entry.value).deletable ? `d  delete “${entry.label}”` : null;
+    if (entry === undefined || entry.special === 'create') return '';
+    return canDeleteTheme(entry.value).deletable ? `d  delete “${entry.label}”` : '';
   }, [onDelete, pending, ordered, focusedIndex]);
 
   // Window the rows so the focused one stays visible in the clipping modal.
@@ -205,11 +213,12 @@ export function ThemeGrid({
 
   return (
     <Box flexDirection="column">
-      {hiddenAbove > 0 && (
-        <Text dimColor>
-          ↑ {hiddenAbove} more row{hiddenAbove === 1 ? '' : 's'}
-        </Text>
-      )}
+      {/* Always one row, even when empty. These three lines used to render
+          conditionally, so the grid changed height on almost every arrow
+          press — and a bottom-anchored modal that changes height pushes fresh
+          lines into the transcript above it. Reserving the row costs nothing
+          and keeps the frame a fixed size. */}
+      <Text dimColor>{hiddenAbove > 0 ? `↑ ${hiddenAbove} more row${hiddenAbove === 1 ? '' : 's'}` : ' '}</Text>
       {visible.map(row => (
         <Box key={row.flatStart} flexDirection="column">
           {row.header !== undefined && (
@@ -225,25 +234,20 @@ export function ThemeGrid({
                 focused={row.flatStart + i === focusedIndex}
                 selected={entry.value === currentSetting}
                 {...(pending?.name === entry.value ? { confirming: { blocked: pending.blocked } } : {})}
+                {...(entry.special === 'create' ? { bannerWidth: gridWidth } : {})}
               />
             ))}
           </Box>
         </Box>
       ))}
-      {hiddenBelow > 0 && (
-        <Text dimColor>
-          ↓ {hiddenBelow} more row{hiddenBelow === 1 ? '' : 's'}
-        </Text>
-      )}
+      <Text dimColor>{hiddenBelow > 0 ? `↓ ${hiddenBelow} more row${hiddenBelow === 1 ? '' : 's'}` : ' '}</Text>
       {/* Taught here rather than only in the picker's footer: this is where
-          the user is looking, and it names the tile it would act on. Shown
-          only when the focused theme can actually be deleted, so the hint is
-          never an offer we would refuse. */}
-      {deleteHint !== null && (
-        <Text dimColor italic>
-          {deleteHint}
-        </Text>
-      )}
+          the user is looking, and it names the tile it would act on. Blank
+          when the focused theme cannot be deleted, so the hint is never an
+          offer we would refuse — but the row is always there. */}
+      <Text dimColor italic>
+        {deleteHint === '' ? ' ' : deleteHint}
+      </Text>
     </Box>
   );
 }
