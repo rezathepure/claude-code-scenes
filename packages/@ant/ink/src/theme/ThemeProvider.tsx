@@ -70,11 +70,22 @@ export function ThemeProvider({ children, initialState, onThemeSave = defaultSav
   // The setting currently in effect (preview wins while picker is open)
   const activeSetting = previewTheme ?? themeSetting;
 
-  // Re-render when themes are added or removed. The registry is a plain Map,
-  // so without this a theme file edited while the CLI is running would keep
-  // rendering its old colours until restart. The version counter is only a
-  // vehicle for the subscription — nothing reads its value.
-  useSyncExternalStore(subscribeToThemeRegistry, getThemeRegistryVersion, getThemeRegistryVersion);
+  // Re-render when themes are added, removed, or REPLACED. The registry is a
+  // plain Map, so without this a theme file edited while the CLI is running
+  // would keep rendering its old colours until restart.
+  //
+  // The version has to reach the context value below, not just this component.
+  // It used to be subscribed to and discarded, which was enough for a change of
+  // theme *name* (that moves `currentTheme`) but not for a palette replaced
+  // under the same name: the memo returned the same object with the same
+  // children, and React bailed out of the entire subtree. Both cases that
+  // matter are same-name — editing a theme file while it is active, and
+  // refining a draft in `/theme create` — so neither repainted.
+  const registryVersion = useSyncExternalStore(
+    subscribeToThemeRegistry,
+    getThemeRegistryVersion,
+    getThemeRegistryVersion,
+  );
 
   const { internal_querier } = useStdin();
 
@@ -133,7 +144,10 @@ export function ThemeProvider({ children, initialState, onThemeSave = defaultSav
       },
       currentTheme,
     }),
-    [themeSetting, previewTheme, currentTheme, onThemeSave],
+    // registryVersion is not read by anything in here; it is in the deps so a
+    // palette replaced under the current name produces a new context value and
+    // consumers actually repaint. See the comment on the subscription above.
+    [themeSetting, previewTheme, currentTheme, onThemeSave, registryVersion],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

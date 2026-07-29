@@ -17,6 +17,7 @@ import { describe, expect, test } from 'bun:test';
 import { Text, ThemeProvider, usePreviewTheme } from '@anthropic/ink';
 import * as React from 'react';
 import { renderToString } from '../../../utils/staticRender.js';
+import { getTheme, registerTheme, unregisterTheme } from '../../../utils/theme.js';
 
 type Counter = { runs: number };
 
@@ -42,6 +43,25 @@ function ReadsItFromARef({ count }: { count: Counter }): React.ReactNode {
   return <Text>probe</Text>;
 }
 
+const REGISTERED_NAME = 'test-only-preview-identity';
+
+/**
+ * Registers a theme from inside the very effect that depends on the preview
+ * API. The `done` guard is the point: without it this loops forever, which is
+ * precisely the failure the ref in ThemeCreator exists to prevent.
+ */
+function RegistersOnce({ count }: { count: Counter }): React.ReactNode {
+  const { setPreviewTheme } = usePreviewTheme();
+  const done = React.useRef(false);
+  React.useEffect(() => {
+    count.runs++;
+    if (done.current) return;
+    done.current = true;
+    registerTheme(REGISTERED_NAME, getTheme('dark'));
+  }, [setPreviewTheme, count]);
+  return <Text>probe</Text>;
+}
+
 async function countRuns(node: (count: Counter) => React.ReactNode): Promise<number> {
   const count: Counter = { runs: 0 };
   await renderToString(<ThemeProvider initialState="dark">{node(count)}</ThemeProvider>, 40);
@@ -55,5 +75,22 @@ describe('usePreviewTheme identity', () => {
 
   test('reading it from a ref runs the effect once', async () => {
     expect(await countRuns(count => <ReadsItFromARef count={count} />)).toBe(1);
+  });
+
+  test('registering a theme churns the identity too', async () => {
+    // Since the same-name repaint fix, the registry version is part of the
+    // context value — which is what makes a refined draft actually show. It
+    // also means ThemeCreator's own `registerThemeWithTraits` invalidates
+    // these callbacks, so the ref above guards a second, more frequent path:
+    // an effect that registers and depends on setPreviewTheme would spin.
+    const count: Counter = { runs: 0 };
+    await renderToString(
+      <ThemeProvider initialState="dark">
+        <RegistersOnce count={count} />
+      </ThemeProvider>,
+      40,
+    );
+    unregisterTheme(REGISTERED_NAME);
+    expect(count.runs).toBe(2);
   });
 });

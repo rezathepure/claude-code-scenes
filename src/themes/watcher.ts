@@ -14,6 +14,7 @@
 
 import { stat } from 'node:fs/promises'
 import chokidar, { type FSWatcher } from 'chokidar'
+import { sceneController } from '../scene/controller.js'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'
 import { createSignal } from '../utils/signal.js'
@@ -45,8 +46,13 @@ let reloadTimer: ReturnType<typeof setTimeout> | undefined
 async function reload(): Promise<void> {
   try {
     const result = await loadUserThemes()
-    // Registering inside loadUserThemes already notifies ThemeProvider, so the
-    // UI repaints on its own; this signal is for warning surfaces.
+    // Registering inside loadUserThemes bumps the theme registry version,
+    // which ThemeProvider now folds into its context value — so palettes
+    // repaint on their own. The scene layer does not: SceneBridge syncs on the
+    // theme *name*, which an edit does not change, so the backdrop would keep
+    // animating the old scene against the old palette until restart.
+    sceneController.refresh()
+    // For anything wanting to surface fresh warnings.
     themesChanged.emit(result)
     logForDebugging(`[themes] Reloaded ${result.themes.length} user theme(s)`)
   } catch (error) {
