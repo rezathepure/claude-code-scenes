@@ -3,8 +3,8 @@ import * as React from 'react';
 import { Select } from '../../components/CustomSelect/index.js';
 import { useModalOrTerminalSize } from '../../context/modalContext.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
-import { StructuredDiff } from '../../components/StructuredDiff.js';
 import { Spinner } from '../../components/Spinner.js';
+import { useAppState } from '../../state/AppState.js';
 import { canvasThemeFor } from '../../themes/canvas.js';
 import { generateTheme } from '../../themes/generate/generate.js';
 import { registerThemeWithTraits, unregisterThemeWithTraits } from '../../themes/register.js';
@@ -14,11 +14,19 @@ import { sceneLabelOf } from '../../scene/label.js';
 import type { SceneConfig } from '../../scene/types.js';
 import type { Theme } from '../../utils/theme.js';
 import { themeNameFromDescription } from './parseArgs.js';
+import { SampleSession } from './SampleSession.js';
 
 type Props = {
   description: string;
   onDone: (result?: string) => void;
 };
+
+/**
+ * Rows the review spends on everything that is not the sample: the theme name,
+ * its description, the slot count, the three-option menu, the diff caveat and
+ * the gaps between them. Warnings are counted separately, at the call site.
+ */
+const CHROME_ROWS = 11;
 
 type Phase =
   | { kind: 'generating' }
@@ -33,15 +41,6 @@ type Phase =
       warnings: ThemeWarning[];
     }
   | { kind: 'failed'; error: string };
-
-/** Sample shown under the preview, so the theme is judged on real output. */
-const SAMPLE_PATCH = {
-  oldStart: 1,
-  newStart: 1,
-  oldLines: 3,
-  newLines: 3,
-  lines: ['  const theme = load()', '- return theme.dark', '+ return theme.resolved'],
-};
 
 /**
  * Generates a theme, applies it live for review, and keeps it only if the user
@@ -58,6 +57,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
   // rendered at raw terminal width overran the frame by six columns.
   const modal = useModalOrTerminalSize(useTerminalSize());
   const width = Math.max(24, modal.columns - 2);
+  const syntaxHighlightingDisabled = useAppState(s => s.settings.syntaxHighlightingDisabled) ?? false;
   const [, setTheme] = useTheme();
   const themeSetting = useThemeSetting();
   const { setPreviewTheme, savePreview, cancelPreview } = usePreviewTheme();
@@ -215,6 +215,12 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
   const repairs = phase.warnings.filter(w => w.message.includes('brightened'));
   const problems = phase.warnings.filter(w => w.severity === 'error');
 
+  // Rows left for the sample once everything else has taken theirs. Warnings
+  // are counted rather than assumed: the modal clips at the bottom, so a theme
+  // that came back with four complaints would otherwise push the menu off the
+  // screen and strand the user with nothing to press.
+  const sampleRows = Math.max(0, modal.rows - CHROME_ROWS - problems.length - (repairs.length > 0 ? 1 : 0));
+
   return (
     <Box flexDirection="column" gap={1}>
       <Box flexDirection="column">
@@ -226,7 +232,15 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       </Box>
 
       <Box flexDirection="column">
-        <StructuredDiff patch={SAMPLE_PATCH} dim={false} filePath="demo.ts" firstLine={null} width={width} />
+        <SampleSession width={width} rows={sampleRows} skipHighlighting={syntaxHighlightingDisabled} />
+        {/* The napi diff renderer picks its fills from the theme's traits, not
+            its slots, so with highlighting on "make the added lines greener"
+            does nothing and there is no way to tell why. */}
+        {!syntaxHighlightingDisabled && (
+          <Text dimColor italic>
+            Diff fills come from your syntax palette; the theme’s own diff colours apply with highlighting off.
+          </Text>
+        )}
       </Box>
 
       <Box flexDirection="column">
