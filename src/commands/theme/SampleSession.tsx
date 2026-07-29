@@ -45,7 +45,7 @@ export type SampleLine = {
 };
 
 /** The edit the scripted session makes. Real work on a real theme. */
-export const SAMPLE_PATCH = {
+const SAMPLE_PATCH = {
   oldStart: 1,
   newStart: 1,
   oldLines: 3,

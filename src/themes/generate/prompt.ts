@@ -320,17 +320,12 @@ export type GenerationRequest = {
 }
 
 /**
- * The instruction half of the prompt — everything except the user's vibe.
- * Split out so it can be cached and tested independently.
+ * How colours reach the screen. Needed by anything that asks for a colour,
+ * which is generation and palette refinement but not backdrop refinement — a
+ * scene names slots, it never writes a value.
  */
-export function buildThemeSystemPrompt(): string {
-  return `You design colour themes for Claude Code, a terminal coding assistant.
-
-You will be given a short description of a mood, brand or idea, and must
-produce a complete colour theme that evokes it while remaining usable for
-hours of real work.
-
-## How the theme is rendered
+function renderRenderingRules(): string {
+  return `## How the theme is rendered
 
 Colours are painted as terminal text. There is no page background: text is
 drawn directly onto whatever background the user's terminal already has. You
@@ -339,9 +334,12 @@ every colour is judged against that.
 
 Values may be written as \`rgb(r,g,b)\`, \`#rrggbb\`, \`ansi256(n)\` or
 \`ansi:<name>\`. Prefer \`rgb(r,g,b)\`. Do not put more than one space after a
-comma; \`rgb(1, 2, 3)\` is fine, \`rgb(1,  2,  3)\` will not render.
+comma; \`rgb(1, 2, 3)\` is fine, \`rgb(1,  2,  3)\` will not render.`
+}
 
-## Design discipline
+/** The slot vocabulary and the rules for spending it. */
+function renderPaletteRules(): string {
+  return `## Design discipline
 
 ${THEME_DISCIPLINE.map(d => `- ${d}`).join('\n')}
 
@@ -365,11 +363,12 @@ contexts: ${renderRemainingSlots()}
 - \`error\`, \`warning\` and \`success\` must be tellable apart at a glance.
 - Slots documented as background fills must stay dim enough that text drawn on
   top of them remains readable.
-- Do not invent slot names. Anything unrecognised is discarded.
+- Do not invent slot names. Anything unrecognised is discarded.`
+}
 
-${renderSceneSection()}
-
-## Worked examples
+/** Three shipped themes, quoted from the files themselves. */
+function renderWorkedExamples(): string {
+  return `## Worked examples
 
 These are themes that ship with Claude Code. Note how each picks one signature
 hue, gives tools a cooler accent, spends one warm hue, and keeps red for
@@ -379,7 +378,27 @@ ${renderExample('matrix', matrix)}
 
 ${renderExample('sakura', sakura)}
 
-${renderExample('voltage', voltage)}
+${renderExample('voltage', voltage)}`
+}
+
+/**
+ * The instruction half of the prompt — everything except the user's vibe.
+ * Split out so it can be cached and tested independently.
+ */
+export function buildThemeSystemPrompt(): string {
+  return `You design colour themes for Claude Code, a terminal coding assistant.
+
+You will be given a short description of a mood, brand or idea, and must
+produce a complete colour theme that evokes it while remaining usable for
+hours of real work.
+
+${renderRenderingRules()}
+
+${renderPaletteRules()}
+
+${renderSceneSection()}
+
+${renderWorkedExamples()}
 
 ## Output
 
@@ -396,4 +415,128 @@ export function buildThemeUserPrompt(request: GenerationRequest): string {
 The user asked for: ${request.vibe}
 
 Return only the JSON object.`
+}
+
+// --- Refinement ------------------------------------------------------------
+
+/**
+ * Which half of the design the user is looking at.
+ *
+ * This weights the prompt; it does not fence the tool. Someone standing on the
+ * backdrop view who types "brighter greens" means it, and a scene-only tool
+ * would have to answer with a shrug. What keeps a refinement surgical is the
+ * merge — an omitted facet is an unchanged facet — not a narrowed schema.
+ */
+export type RefineStage = 'backdrop' | 'palette'
+
+type RefineRequest = {
+  name: string
+  mode: 'dark' | 'light'
+  /** The palette as it stands. Every slot, so nothing has to be guessed. */
+  colors: Record<string, string>
+  /** The animation as it stands, serialised the way a theme file writes it. */
+  scene: unknown
+  /** What the user just asked for. */
+  instruction: string
+  /** Earlier instructions, oldest first, so a sequence reads as a sequence. */
+  history: readonly string[]
+  stage: RefineStage
+}
+
+/** Earlier instructions worth carrying. Enough for continuity, not a novel. */
+const HISTORY_LIMIT = 6
+
+/**
+ * The instruction half of a refinement.
+ *
+ * Carries only the vocabulary the stage needs. The backdrop stage does not
+ * need seventy slot descriptions to make rain slower, and the palette stage
+ * does not need the motion grammar to warm up a green — and the difference is
+ * most of the prompt. A palette refinement runs at roughly half the tokens of
+ * a fresh generation, which is why refining costs less than starting over.
+ */
+export function buildRefineSystemPrompt(stage: RefineStage): string {
+  const shared = `You are adjusting an existing colour theme for Claude Code, a terminal
+coding assistant. The user is looking at the theme right now and has asked for
+one change.
+
+Change what they asked for and nothing else. Everything you leave out is kept
+exactly as it is, so omission is how you say "unchanged" — it is never a way to
+lose work. Do not restate the parts you are not changing.`
+
+  const rules =
+    stage === 'palette'
+      ? `${renderRenderingRules()}
+
+${renderPaletteRules()}`
+      : renderSceneSection()
+
+  const output =
+    stage === 'palette'
+      ? `## Output
+
+Call the tool with:
+
+- \`note\` — one short line, in plain language, saying what you changed.
+- \`colors\` — ONLY the slots whose values are changing. A request about one
+  thing usually moves a handful of slots; if you find yourself listing the
+  whole palette, you have misread the request.
+- \`scene\` — omit it. Only include an animation if the user asked for one.
+
+If the request cannot be expressed as colours at all, change nothing and say so
+in \`note\`.`
+      : `## Output
+
+Call the tool with:
+
+- \`note\` — one short line, in plain language, saying what you changed.
+- \`scene\` — the COMPLETE animation, including the layers you are keeping. A
+  scene is replaced wholesale rather than merged, so anything you leave out is
+  gone.
+- \`colors\` — omit it, unless the user asked for a colour change. Layers name
+  palette slots rather than carrying their own values, so most changes to how
+  the animation looks are changes to the layers, not the palette.`
+
+  return `${shared}
+
+${rules}
+
+${output}`
+}
+
+/** The user half: the current state, the history, and the new instruction. */
+export function buildRefineUserPrompt(request: RefineRequest): string {
+  // The backdrop stage sees only the slots a layer may name. The full palette
+  // would be ~600 tokens of values it cannot use and might be tempted to edit.
+  const palette =
+    request.stage === 'palette'
+      ? request.colors
+      : Object.fromEntries(
+          SCENE_COLOR_SLOTS.filter(
+            slot => request.colors[slot] !== undefined,
+          ).map(slot => [slot, request.colors[slot]]),
+        )
+
+  const heading =
+    request.stage === 'palette'
+      ? 'Its colours:'
+      : 'The colour slots its layers may name:'
+
+  const recent = request.history.slice(-HISTORY_LIMIT)
+  const earlier =
+    recent.length > 0
+      ? `\nThey have already asked, in order:\n${recent.map(h => `- ${h}`).join('\n')}\n`
+      : ''
+
+  return `The theme is called "${request.name}" and is designed for a ${request.mode} terminal.
+
+${heading}
+
+${JSON.stringify(palette, null, 2)}
+
+Its animation:
+
+${JSON.stringify(request.scene, null, 2)}
+${earlier}
+Now they ask: ${request.instruction}`
 }
