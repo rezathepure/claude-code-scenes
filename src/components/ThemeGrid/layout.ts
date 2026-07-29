@@ -5,7 +5,7 @@
  */
 
 import { getSceneConfig } from '../../scene/registry.js'
-import type { SceneKind } from '../../scene/types.js'
+import { sceneLabelOf } from '../../scene/label.js'
 import { getThemeMeta, type ThemeOrigin } from '../../themes/meta.js'
 import {
   getRegisteredThemeNames,
@@ -26,7 +26,11 @@ export type GridEntry = {
   paletteName: string
   label: string
   mode: 'dark' | 'light'
-  sceneKind: SceneKind
+  /**
+   * The scene's display name, or null when the theme does not animate. A
+   * composed scene has no single `kind` to print, so the model names it.
+   */
+  sceneLabel: string | null
   origin: ThemeOrigin
   /**
    * A tile that is not a theme. 'create' is the "design your own" promo tile:
@@ -69,7 +73,7 @@ export function buildGridEntries(
       paletteName: name,
       label: option.label,
       mode: name.includes('light') ? 'light' : 'dark',
-      sceneKind: 'none',
+      sceneLabel: null,
       origin: 'builtin',
     })
   }
@@ -85,7 +89,7 @@ export function buildGridEntries(
       paletteName: name,
       label: name,
       mode: meta?.mode ?? 'dark',
-      sceneKind: getSceneConfig(name).kind,
+      sceneLabel: sceneLabelOf(getSceneConfig(name)),
       origin: meta?.origin ?? 'cc',
     })
   }
@@ -98,7 +102,7 @@ export function buildGridEntries(
       paletteName: 'dark',
       label: 'Create your own',
       mode: 'dark',
-      sceneKind: 'none',
+      sceneLabel: null,
       origin: 'cc',
       special: 'create',
     })
@@ -120,7 +124,7 @@ function bandKeyFor(entry: GridEntry): GridBandKey {
   if (entry.special === 'create') return 'animated'
   // Animation trumps origin: matrix and sakura lead the picker — they are
   // the product — wherever they come from.
-  if (entry.sceneKind !== 'none') return 'animated'
+  if (entry.sceneLabel !== null) return 'animated'
   if (entry.origin === 'official') return 'official'
   if (entry.origin === 'cc') return 'custom'
   // builtin and (non-animated) bundled read as "shipped with the app".

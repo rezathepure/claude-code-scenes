@@ -20,6 +20,7 @@ import type { ThemeWarning } from '../schema.js'
 import matrix from './matrix.json'
 import parchment from './parchment.json'
 import sakura from './sakura.json'
+import voltage from './voltage.json'
 import { registerThemeWithTraits } from '../register.js'
 
 const BUNDLED: ReadonlyArray<readonly [string, unknown]> = [
@@ -29,6 +30,11 @@ const BUNDLED: ReadonlyArray<readonly [string, unknown]> = [
   // built-in to inherit from and a different background to validate against —
   // would ship with no theme exercising it.
   ['parchment', parchment],
+  // The composed-scene worked example: two field layers and a shader, which
+  // is what the generator is being asked to produce. Without it the only
+  // shipped scenes would be the two legacy presets, and the prompt would be
+  // teaching from examples of the thing it is trying to move past.
+  ['voltage', voltage],
 ]
 
 /**

@@ -80,7 +80,7 @@ export const SUPPORTED_SETTINGS: Record<string, SettingConfig> = {
   sceneAnimationsEnabled: {
     source: 'global',
     type: 'boolean',
-    description: 'Animated theme background scenes (rain, petals)',
+    description: 'Animated theme background scenes',
   },
   terminalProgressBarEnabled: {
     source: 'global',

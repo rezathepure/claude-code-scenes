@@ -14,30 +14,96 @@
  * than hand-maintained, so it cannot drift as slots are added.
  */
 
+import {
+  FIELD_PARAMS,
+  MAX_FIELDS,
+  MAX_SHADERS,
+  MAX_SPRITES,
+  type ParamTable,
+  SCENE_COLOR_SLOTS,
+  SHADER_PARAMS,
+  SPRITE_PARAMS,
+} from '../scene/grammar.js'
 import { PETALS_CLAMPS, RAIN_CLAMPS } from '../scene/types.js'
 import { KEY_SLOT_DOCS, SLOT_FAMILIES } from './generate/slotDocs.js'
 import { getKnownSlotNames } from './schema.js'
 
 /**
- * Builds the params sub-schema for a scene primitive from its clamp table,
- * so editor autocomplete shows the same mins/maxes/defaults the loader
- * actually enforces — one source of truth for the numbers.
+ * Builds a params sub-schema from a grammar table, so editor autocomplete
+ * shows the same mins/maxes/defaults/prose the loader actually enforces.
+ *
+ * The prose used to live here as a second hand-maintained table keyed by the
+ * same names — two lists to keep in step, and they had already diverged from
+ * the prompt. It lives in the table now; this just renders it.
  */
-function clampParamsSchema(
-  clamps: Record<string, { default: number; min: number; max: number }>,
-  descriptions: Record<string, string>,
-): Record<string, unknown> {
+function paramTableSchema(table: ParamTable): Record<string, unknown> {
   const properties: Record<string, unknown> = {}
-  for (const [key, spec] of Object.entries(clamps)) {
-    properties[key] = {
-      type: 'number',
-      minimum: spec.min,
-      maximum: spec.max,
-      default: spec.default,
-      description: descriptions[key] ?? '',
+  for (const [key, spec] of Object.entries(table)) {
+    switch (spec.type) {
+      case 'number':
+      case 'int':
+        properties[key] = {
+          type: spec.type === 'int' ? 'integer' : 'number',
+          minimum: spec.min,
+          maximum: spec.max,
+          default: spec.default,
+          description: spec.describe,
+        }
+        break
+      case 'enum':
+        properties[key] = {
+          type: 'string',
+          enum: [...spec.values],
+          default: spec.default,
+          description: spec.describe,
+        }
+        break
+      case 'slot':
+        properties[key] = {
+          type: 'string',
+          enum: [...SCENE_COLOR_SLOTS],
+          default: spec.default,
+          description: spec.describe,
+        }
+        break
+      case 'char':
+      case 'text':
+      case 'expr':
+        properties[key] = {
+          type: 'string',
+          default: spec.default,
+          description: spec.describe,
+        }
+        break
+      case 'frames':
+        properties[key] = {
+          type: 'array',
+          maxItems: spec.maxFrames,
+          items: {
+            type: 'array',
+            maxItems: spec.maxRows,
+            items: { type: 'string', maxLength: spec.maxCols },
+          },
+          description: spec.describe,
+        }
+        break
     }
   }
   return { type: 'object', additionalProperties: false, properties }
+}
+
+/** One array of layers, for the composed-scene arm. */
+function layerArraySchema(
+  table: ParamTable,
+  max: number,
+  description: string,
+): Record<string, unknown> {
+  return {
+    type: 'array',
+    maxItems: max,
+    description,
+    items: paramTableSchema(table),
+  }
 }
 
 /** Filename used inside ~/.claude/themes, hidden so it does not look like a theme. */
@@ -121,17 +187,7 @@ export function buildThemeJsonSchema(): Record<string, unknown> {
             additionalProperties: false,
             properties: {
               kind: { type: 'string', enum: ['rain'] },
-              params: clampParamsSchema(RAIN_CLAMPS, {
-                density: 'Drops per column of terminal width.',
-                speedMin:
-                  'Slowest fall speed, cells per tick (10 ticks/second).',
-                speedMax: 'Fastest fall speed, cells per tick.',
-                trailMin: 'Shortest trail, cells.',
-                trailMax: 'Longest trail, cells.',
-                mutateRate: 'Per-glyph chance per tick of mutating.',
-                intensity:
-                  'Overall opacity: 1 is full strength, lower fades the rain toward the background.',
-              }),
+              params: paramTableSchema(RAIN_CLAMPS),
             },
           },
           {
@@ -140,16 +196,39 @@ export function buildThemeJsonSchema(): Record<string, unknown> {
             additionalProperties: false,
             properties: {
               kind: { type: 'string', enum: ['petals'] },
-              params: clampParamsSchema(PETALS_CLAMPS, {
-                density: 'Petals per 1000 screen cells.',
-                fallMin: 'Slowest fall speed, cells per tick.',
-                fallMax: 'Fastest fall speed, cells per tick.',
-                swayAmp: 'Horizontal sway amplitude, cells.',
-                swayPeriod: 'Ticks per full sway cycle.',
-                tumblePeriod: 'Ticks per full tumble cycle.',
-                intensity:
-                  'Overall opacity: 1 is full strength, lower fades the petals toward the background.',
-              }),
+              params: paramTableSchema(PETALS_CLAMPS),
+            },
+          },
+          {
+            // The composed scene. Unlike the preset arms this one is
+            // deliberately OPEN (`additionalProperties` unset): a theme
+            // written by a newer build must not show as invalid in an editor
+            // just because this build has not learned its layer type yet —
+            // the loader accepts-and-warns, and the schema should agree.
+            type: 'object',
+            required: ['kind'],
+            properties: {
+              kind: { type: 'string', enum: ['custom'] },
+              label: {
+                type: 'string',
+                description:
+                  'Two or three words naming the animation, shown beside the theme in the picker.',
+              },
+              fields: layerArraySchema(
+                FIELD_PARAMS,
+                MAX_FIELDS,
+                'Particle layers: weather, circuitry, embers, stars, dust.',
+              ),
+              sprites: layerArraySchema(
+                SPRITE_PARAMS,
+                MAX_SPRITES,
+                'Drawn art animated along a path. A space is transparent.',
+              ),
+              shaders: layerArraySchema(
+                SHADER_PARAMS,
+                MAX_SHADERS,
+                'A maths expression evaluated per cell, giving a brightness.',
+              ),
             },
           },
         ],

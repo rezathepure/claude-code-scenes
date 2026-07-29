@@ -35,7 +35,7 @@ function entry(partial: Partial<GridEntry> & { value: string }): GridEntry {
     paletteName: partial.value,
     label: partial.value,
     mode: 'dark',
-    sceneKind: 'none',
+    sceneLabel: null,
     origin: 'builtin',
     ...partial,
     value: partial.value as GridEntry['value'],
@@ -92,8 +92,8 @@ describe('moveIndex', () => {
     //   [f, g]                (row 2: 5 6)
     const banded = buildRows(
       groupBands([
-        entry({ value: 'anim1', sceneKind: 'rain' }),
-        entry({ value: 'anim2', sceneKind: 'petals' }),
+        entry({ value: 'anim1', sceneLabel: 'rain' }),
+        entry({ value: 'anim2', sceneLabel: 'petals' }),
         ...['c', 'd', 'e', 'f', 'g'].map(v => entry({ value: v })),
       ]),
       3,
@@ -117,7 +117,7 @@ describe('flattenBands', () => {
   test('matches the row order buildRows renders', () => {
     const bands = groupBands([
       entry({ value: 'dark' }),
-      entry({ value: 'anim', sceneKind: 'rain' }),
+      entry({ value: 'anim', sceneLabel: 'rain' }),
       entry({ value: 'mine', origin: 'cc' }),
     ])
     const flat = flattenBands(bands)
@@ -142,7 +142,7 @@ describe('groupBands', () => {
   test('animation trumps origin and bands keep their order', () => {
     const entries = [
       entry({ value: 'dark' }),
-      entry({ value: 'test-only-anim', sceneKind: 'rain', origin: 'bundled' }),
+      entry({ value: 'test-only-anim', sceneLabel: 'rain', origin: 'bundled' }),
       entry({ value: 'test-only-mine', origin: 'cc' }),
       entry({ value: 'test-only-theirs', origin: 'official' }),
       entry({ value: 'test-only-parch', origin: 'bundled' }),
@@ -173,9 +173,9 @@ describe('groupBands', () => {
 describe('buildRows', () => {
   test('chunks per band with headers on first rows and continuous flatStart', () => {
     const entries = [
-      entry({ value: 'a', sceneKind: 'rain' }),
-      entry({ value: 'b', sceneKind: 'petals' }),
-      entry({ value: 'c', sceneKind: 'rain' }),
+      entry({ value: 'a', sceneLabel: 'rain' }),
+      entry({ value: 'b', sceneLabel: 'petals' }),
+      entry({ value: 'c', sceneLabel: 'rain' }),
       entry({ value: 'd' }),
     ]
     const rows = buildRows(groupBands(entries), 2)
@@ -236,7 +236,7 @@ describe('buildGridEntries', () => {
 
     expect(entries[0]).toMatchObject({ value: 'dark', origin: 'builtin' })
     expect(anim).toMatchObject({
-      sceneKind: 'rain',
+      sceneLabel: 'rain',
       origin: 'cc',
       mode: 'dark',
     })
@@ -262,7 +262,7 @@ describe('buildGridEntries', () => {
 
     // The showcase themes lead the band; the invitation follows them.
     const bands = groupBands([
-      entry({ value: 'test-only-rainy', sceneKind: 'rain' }),
+      entry({ value: 'test-only-rainy', sceneLabel: 'rain' }),
       create,
     ])
     expect(bands[0]!.key).toBe('animated')

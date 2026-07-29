@@ -19,7 +19,7 @@ function makeEntry(partial: Partial<GridEntry>): GridEntry {
     paletteName: 'dark',
     label: 'Dark mode',
     mode: 'dark',
-    sceneKind: 'none',
+    sceneLabel: null,
     origin: 'builtin',
     ...partial,
   } as GridEntry;
@@ -63,7 +63,7 @@ describe('ThemeTile', () => {
           value: 'test-tile9',
           paletteName: 'test-tile9',
           label: 'test-tile9',
-          sceneKind: 'rain',
+          sceneLabel: 'rain',
           origin: 'cc',
         })}
         focused={false}

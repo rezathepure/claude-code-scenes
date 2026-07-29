@@ -1,0 +1,83 @@
+{
+  "mode": "dark",
+  "description": "Rain-slick chrome and hot magenta. A city that never powers down.",
+  "author": "nova theme lab",
+  "scene": {
+    "kind": "custom",
+    "label": "neon drizzle",
+    "fields": [
+      {
+        "motion": "fall",
+        "glyphs": "circuit",
+        "fade": "trail",
+        "color": "claude",
+        "density": 0.16,
+        "speedMin": 0.4,
+        "speedMax": 1.7,
+        "trailMin": 2,
+        "trailMax": 7,
+        "mutateRate": 0.04,
+        "intensity": 0.5,
+        "priority": 5,
+        "weight": 4
+      },
+      {
+        "motion": "scan",
+        "glyphs": "rules",
+        "fade": "flat",
+        "color": "suggestion",
+        "density": 0.05,
+        "speedMin": 0.06,
+        "speedMax": 0.06,
+        "trailMin": 1,
+        "intensity": 0.3,
+        "priority": 7,
+        "weight": 2
+      }
+    ],
+    "shaders": [
+      {
+        "expr": "sin(u*11 + t/13) * sin(v*6 - t/21)",
+        "glyphs": "blocks",
+        "color": "warning",
+        "threshold": 0.74,
+        "levels": 4,
+        "step": 2,
+        "intensity": 0.28,
+        "priority": 8,
+        "weight": 2
+      }
+    ]
+  },
+  "colors": {
+    "text": "rgb(228,232,248)",
+    "inverseText": "rgb(14,10,26)",
+    "inactive": "rgb(132,126,172)",
+    "inactiveShimmer": "rgb(176,168,214)",
+    "subtle": "rgb(78,70,112)",
+    "claude": "rgb(226,80,196)",
+    "claudeShimmer": "rgb(255,168,236)",
+    "permission": "rgb(196,104,255)",
+    "permissionShimmer": "rgb(228,172,255)",
+    "planMode": "rgb(108,172,255)",
+    "autoAccept": "rgb(64,214,246)",
+    "bashBorder": "rgb(255,92,182)",
+    "ide": "rgb(88,196,246)",
+    "promptBorder": "rgb(150,74,222)",
+    "promptBorderShimmer": "rgb(200,146,255)",
+    "suggestion": "rgb(64,214,246)",
+    "remember": "rgb(250,206,86)",
+    "background": "rgb(52,44,84)",
+    "success": "rgb(72,232,172)",
+    "error": "rgb(255,76,104)",
+    "warning": "rgb(250,182,72)",
+    "warningShimmer": "rgb(255,214,140)",
+    "merged": "rgb(176,116,250)",
+    "diffAdded": "rgb(14,54,46)",
+    "diffRemoved": "rgb(62,20,40)",
+    "diffAddedDimmed": "rgb(10,36,30)",
+    "diffRemovedDimmed": "rgb(42,14,28)",
+    "diffAddedWord": "rgb(22,96,76)",
+    "diffRemovedWord": "rgb(106,32,58)"
+  }
+}

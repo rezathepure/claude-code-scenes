@@ -6,6 +6,7 @@ import { Box, Text, usePreviewTheme, useTheme, useThemeSetting } from '@anthropi
 import { useRegisterKeybindingContext } from '../keybindings/KeybindingContext.js';
 import { useKeybinding } from '../keybindings/useKeybinding.js';
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js';
+import { sceneLabelOf } from '../scene/label.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
 import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
@@ -125,12 +126,13 @@ export function ThemePicker({
       return null;
     }
     const scene = getSceneConfig(theme);
-    if (scene.kind === 'none') return null;
+    const label = sceneLabelOf(scene);
+    if (label === null) return null;
     if (!isFullscreenActive()) {
-      return `This theme has an animated background (${scene.kind}) — run with CLAUDE_CODE_NO_FLICKER=1 to see it (fullscreen mode)`;
+      return `This theme has an animated background (${label}) — run with CLAUDE_CODE_NO_FLICKER=1 to see it (fullscreen mode)`;
     }
     if (getGlobalConfig().sceneAnimationsEnabled === false) {
-      return `This theme has an animated background (${scene.kind}) — enable "Theme animations" in /config to see it`;
+      return `This theme has an animated background (${label}) — enable "Theme animations" in /config to see it`;
     }
     return null;
   }, [theme]);

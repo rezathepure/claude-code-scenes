@@ -13,6 +13,7 @@ import { getSceneConfig } from '../scene/registry.js'
 import type { SceneConfig } from '../scene/types.js'
 import { isKnownTheme, isReservedThemeName } from '../utils/theme.js'
 import { THEME_SCHEMA_REF } from './jsonSchema.js'
+import { serializeSceneConfig } from './schema.js'
 import { getCcThemesDir } from './loader.js'
 
 export type SaveResult =
@@ -61,8 +62,10 @@ export function serializeThemeFile(theme: {
     body.description = theme.description
   }
   // The theme's actual scene, not a hardcoded 'none' — /theme export must
-  // carry a theme's animation along with its colours.
-  body.scene = theme.scene ?? { kind: 'none' }
+  // carry a theme's animation along with its colours. Through the serialiser,
+  // because a composed scene holds validated sprite art in memory that is not
+  // the shape the file format uses.
+  body.scene = serializeSceneConfig(theme.scene ?? { kind: 'none' })
   body.colors = theme.colors
 
   return `${JSON.stringify(body, null, 2)}\n`

@@ -8,6 +8,7 @@ import { generateTheme } from '../../themes/generate/generate.js';
 import { registerThemeWithTraits, unregisterThemeWithTraits } from '../../themes/register.js';
 import { findAvailableThemeName, saveGeneratedTheme } from '../../themes/save.js';
 import type { ThemeWarning } from '../../themes/schema.js';
+import { sceneLabelOf } from '../../scene/label.js';
 import type { SceneConfig } from '../../scene/types.js';
 import type { Theme } from '../../utils/theme.js';
 import { themeNameFromDescription } from './parseArgs.js';
@@ -130,9 +131,7 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       <Box flexDirection="column">
         <Text bold color="claude">
           {phase.name}
-          {phase.scene !== undefined && phase.scene.kind !== 'none' && (
-            <Text color="claudeShimmer"> ✦ {phase.scene.kind}</Text>
-          )}
+          {sceneLabelOf(phase.scene) !== null && <Text color="claudeShimmer"> ✦ {sceneLabelOf(phase.scene)}</Text>}
         </Text>
         {phase.themeDescription !== undefined && <Text dimColor>{phase.themeDescription}</Text>}
       </Box>

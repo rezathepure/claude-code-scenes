@@ -24,8 +24,8 @@ describe('createTileScene', () => {
   test('every cell styleId indexes into the colour table', () => {
     for (const config of [RAIN, PETALS]) {
       const { model, colors } = createTileScene(config, PALETTE, 26, 4, 2)
-      for (let i = 0; i < 50; i++) model.tick()
-      for (const cell of model.cells()) {
+      for (let i = 0; i < 50; i++) model!.tick()
+      for (const cell of model!.cells()) {
         expect(cell.styleId).toBeGreaterThanOrEqual(0)
         expect(cell.styleId).toBeLessThan(colors.length)
       }
@@ -35,8 +35,8 @@ describe('createTileScene', () => {
   test('cells stay within tile bounds across 50 ticks', () => {
     const { model } = createTileScene(PETALS, PALETTE, 26, 4, 3)
     for (let i = 0; i < 50; i++) {
-      model.tick()
-      for (const cell of model.cells()) {
+      model!.tick()
+      for (const cell of model!.cells()) {
         expect(cell.x).toBeGreaterThanOrEqual(0)
         expect(cell.x).toBeLessThan(26)
         expect(cell.y).toBeGreaterThanOrEqual(0)
@@ -49,10 +49,10 @@ describe('createTileScene', () => {
     const a = createTileScene(RAIN, PALETTE, 26, 4, 42)
     const b = createTileScene(RAIN, PALETTE, 26, 4, 42)
     for (let i = 0; i < 20; i++) {
-      a.model.tick()
-      b.model.tick()
+      a.model!.tick()
+      b.model!.tick()
     }
-    expect(a.model.cells()).toEqual(b.model.cells())
+    expect(a.model!.cells()).toEqual(b.model!.cells())
     expect(a.colors).toEqual(b.colors)
   })
 })

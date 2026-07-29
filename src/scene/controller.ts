@@ -18,11 +18,8 @@ import { getGlobalConfig } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
 import { isFullscreenActive } from '../utils/fullscreen.js'
 import { getTheme } from '../utils/theme.js'
-import { derivePetalStyles, deriveRainStyles } from './colors.js'
-import { createPetalsModel } from './petals.js'
-import { createRainModel } from './rain.js'
+import { compileScene } from './compile.js'
 import { getSceneConfig } from './registry.js'
-import { mulberry32 } from './rng.js'
 
 /** The slice of Ink the controller talks to (structural — Ink isn't exported). */
 type InkLike = {
@@ -128,18 +125,13 @@ class SceneController {
 
     const theme = getTheme(input.themeName) as unknown as Record<string, string>
     const seed = Date.now() >>> 0
-    if (scene.kind === 'rain') {
-      this.model = createRainModel(
-        scene.params,
-        deriveRainStyles(theme, ink, scene.params.intensity),
-        mulberry32(seed),
-      )
-    } else {
-      this.model = createPetalsModel(
-        scene.params,
-        derivePetalStyles(theme, ink, scene.params.intensity),
-        mulberry32(seed),
-      )
+    // One call, every scene shape. The rain-or-else-petals branch that used to
+    // live here silently rendered any third kind as petals; there is no branch
+    // to get wrong now.
+    this.model = compileScene(scene, theme, ink, seed)
+    if (this.model === null) {
+      this.stop()
+      return
     }
 
     ink.setSceneModel(this.model)

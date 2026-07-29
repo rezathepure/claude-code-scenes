@@ -58,6 +58,23 @@ function useFocusPulse(active: boolean): string {
   return FOCUS_PULSE[frame] ?? FOCUS_PULSE[1];
 }
 
+/**
+ * The scene name shown beside a theme, shortened to whatever the header line
+ * has left.
+ *
+ * The name used to be the primitive's — always "rain" or "petals", always
+ * short. A model-authored label can be sixteen columns, and the theme's own
+ * name has first claim on the line: losing "cyberpunk-thunderstorm" to make
+ * room for "neon drizzle" would be exactly backwards.
+ */
+function sceneChip(entry: GridEntry): string {
+  const label = entry.sceneLabel ?? '';
+  // "● " + name + " ✦ " + chip, inside the tile's inner width.
+  const room = TILE_INNER_WIDTH - entry.label.length - 5;
+  if (room >= label.length) return label;
+  return room >= 4 ? `${label.slice(0, room - 1)}…` : '';
+}
+
 /** The create tile's fixed chrome: Claude Orange on neutral greys. */
 const CREATE_ACCENT = 'rgb(215,119,87)';
 const CREATE_ACCENT_BRIGHT = 'rgb(255,168,130)';
@@ -154,7 +171,7 @@ function ThemeTileInner({
           <Text color={t.claude} bold={focused}>
             {entry.label}
           </Text>
-          {entry.sceneKind !== 'none' && <Text color={t.claudeShimmer}> ✦ {entry.sceneKind}</Text>}
+          {entry.sceneLabel !== null && <Text color={t.claudeShimmer}> ✦ {sceneChip(entry)}</Text>}
         </Text>
       </Box>
       {focused && scene !== null ? (

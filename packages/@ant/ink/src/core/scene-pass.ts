@@ -85,10 +85,21 @@ export interface SceneModel {
   cells(): ReadonlyArray<SceneGlyph>
 }
 
-/** Hard cap on painted cells per frame, keeping SSH/tmux byte volume bounded. */
-const MAX_CELLS_ABSOLUTE = 600
+/**
+ * Hard cap on painted cells per frame, keeping SSH/tmux byte volume bounded.
+ *
+ * Exported because the application composites several scene layers into the
+ * single array this pass truncates, and it can only divide a budget it can
+ * see. Two copies of these numbers would drift the moment either changed.
+ */
+export const MAX_CELLS_ABSOLUTE = 600
 /** …and never more than this fraction of the screen. */
-const MAX_CELLS_FRACTION = 0.15
+export const MAX_CELLS_FRACTION = 0.15
+
+/** The pass's per-frame paint budget for a screen of the given size. */
+export function sceneCellBudget(width: number, height: number): number {
+  return Math.min(MAX_CELLS_ABSOLUTE, (width * height * MAX_CELLS_FRACTION) | 0)
+}
 
 const EMPTY_CELL = {
   char: ' ',

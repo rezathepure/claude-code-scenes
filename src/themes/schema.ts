@@ -12,15 +12,28 @@
  * for the declared mode. A ten-line file is a valid theme.
  */
 
-import { z } from 'zod/v4'
+import { isDrawableChar, validateFrames } from '../scene/frames.js'
 import {
+  FIELD_PARAMS,
+  MAX_FIELDS,
+  MAX_SHADERS,
+  MAX_SPRITES,
+  type ParamTable,
+  SCENE_COLOR_SLOTS,
+  SCENE_PARAMS,
+  SHADER_PARAMS,
+  SPRITE_PARAMS,
+} from '../scene/grammar.js'
+import {
+  type FieldLayer,
   PETALS_CLAMPS,
   type PetalsParams,
   RAIN_CLAMPS,
   type RainParams,
   type SceneConfig,
+  type ShaderLayer,
+  type SpriteLayer,
 } from '../scene/types.js'
-import { lazySchema } from '../utils/lazySchema.js'
 import { getTheme } from '../utils/theme.js'
 
 export type ThemeMode = 'dark' | 'light'
@@ -35,10 +48,12 @@ export type ThemeFile = {
   description?: string
   author?: string
   /**
-   * The animated background: a primitive NAME plus bounded NUMBERS, never
-   * code — that is what keeps theme files safe to share. Params are optional
-   * in the file; parsing fills defaults and clamps out-of-range values with
-   * a warning, so downstream always sees a complete, sane config.
+   * The animated background: either a legacy preset name, or composed layers
+   * — particle fields, drawn sprites, expression shaders. Names and bounded
+   * numbers throughout, so a theme file is never executed as code. Params are
+   * optional in the file; parsing fills defaults, clamps out-of-range values
+   * and drops unsalvageable layers with a warning, so downstream always sees
+   * a complete, sane config.
    *
    * Parsed unconditionally (it is inert data); whether anything ANIMATES is
    * gated at the activation point behind feature('SCENE_LAYER'), the same
@@ -71,35 +86,13 @@ export function getKnownSlotNames(): string[] {
   return Object.keys(getTheme('dark'))
 }
 
-/**
- * Zod schema, used to emit a JSON Schema for editor autocomplete via the
- * `$schema` key — not on the load path, which uses the hand-rolled guards
- * below. This mirrors how keybindings.json is handled: zod for tooling,
- * explicit guards for loading, so a schema change can never make a user's
- * existing theme stop loading.
+/*
+ * There was a zod `ThemeFileSchema` here, described as the source for the
+ * editor-autocomplete JSON Schema. It never was: jsonSchema.ts hand-builds
+ * that from the clamp tables, and this mirror had zero importers while
+ * carrying a third redundant copy of the scene shape. Removed rather than
+ * updated — a fourth place to keep in sync is worse than none.
  */
-export const ThemeFileSchema = lazySchema(() =>
-  z.object({
-    $schema: z.string().optional(),
-    mode: z.enum(['dark', 'light']),
-    description: z.string().optional(),
-    author: z.string().optional(),
-    colors: z.record(z.string(), z.string()),
-    scene: z
-      .union([
-        z.object({ kind: z.literal('none') }),
-        z.object({
-          kind: z.literal('rain'),
-          params: z.record(z.string(), z.number()).optional(),
-        }),
-        z.object({
-          kind: z.literal('petals'),
-          params: z.record(z.string(), z.number()).optional(),
-        }),
-      ])
-      .optional(),
-  }),
-)
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -138,61 +131,172 @@ export function translateOfficialTheme(
   return { mode: raw.base, colors: raw.overrides }
 }
 
-type ClampTable = Record<string, { default: number; min: number; max: number }>
-
 /**
- * Resolves a scene's params against its clamp table: missing → default,
- * non-numeric → default + warning, out of range → clamped + warning, unknown
+ * Resolves one layer's parameters against its table: missing → default,
+ * wrong type → default + warning, out of range → clamped + warning, unknown
  * → dropped + warning. The theme always loads; only the value bends.
+ *
+ * Returns null when the layer cannot be salvaged — a sprite whose art is
+ * malformed, or a shader with no expression. Those are dropped whole, because
+ * a half-valid sprite paints debris and debris is worse than nothing.
+ *
+ * The `number` branch's warning strings are load-bearing: they are what the
+ * loader tests assert, and they were written before this function was
+ * generic. Keep them byte-identical.
  */
-function clampSceneParams(
+export function coerceParams(
   raw: unknown,
-  clamps: ClampTable,
-  kind: string,
+  table: ParamTable,
+  path: string,
   themeName: string,
   warnings: ThemeWarning[],
-): Record<string, number> {
-  const out: Record<string, number> = {}
+): Record<string, unknown> | null {
+  const out: Record<string, unknown> = {}
   const source = isPlainObject(raw) ? raw : {}
 
-  for (const [key, spec] of Object.entries(clamps)) {
+  const warn = (message: string, suggestion?: string): void => {
+    warnings.push({
+      type: 'invalid_field',
+      severity: 'warning',
+      theme: themeName,
+      message,
+      ...(suggestion !== undefined ? { suggestion } : {}),
+    })
+  }
+
+  for (const [key, spec] of Object.entries(table)) {
     const value = source[key]
-    if (value === undefined) {
-      out[key] = spec.default
-      continue
+    const label = `"${path}.${key}"`
+
+    switch (spec.type) {
+      case 'number':
+      case 'int': {
+        if (value === undefined) {
+          out[key] = spec.default
+          break
+        }
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          warn(
+            `Scene param ${label} must be a number; using the default (${spec.default}).`,
+          )
+          out[key] = spec.default
+          break
+        }
+        if (value < spec.min || value > spec.max) {
+          const clamped = Math.min(spec.max, Math.max(spec.min, value))
+          warn(
+            `Scene param ${label} is out of range [${spec.min}–${spec.max}]; clamped ${value} to ${clamped}.`,
+          )
+          out[key] = spec.type === 'int' ? Math.round(clamped) : clamped
+          break
+        }
+        out[key] = spec.type === 'int' ? Math.round(value) : value
+        break
+      }
+
+      case 'enum': {
+        if (value === undefined) {
+          out[key] = spec.default
+          break
+        }
+        if (typeof value !== 'string' || !spec.values.includes(value)) {
+          warn(
+            `Scene param ${label} is not one of the available values; using the default (${spec.default}).`,
+            `Available: ${spec.values.join(', ')}.`,
+          )
+          out[key] = spec.default
+          break
+        }
+        out[key] = value
+        break
+      }
+
+      case 'slot': {
+        if (value === undefined) {
+          out[key] = spec.default
+          break
+        }
+        if (typeof value !== 'string' || !SCENE_COLOR_SLOTS.includes(value)) {
+          warn(
+            `Scene param ${label} must be a colour slot a scene can derive from; using the default (${spec.default}).`,
+            `Available: ${SCENE_COLOR_SLOTS.join(', ')}.`,
+          )
+          out[key] = spec.default
+          break
+        }
+        out[key] = value
+        break
+      }
+
+      case 'char': {
+        if (value === undefined || value === '') {
+          out[key] = spec.default
+          break
+        }
+        if (typeof value !== 'string' || !isDrawableChar(value)) {
+          warn(
+            `Scene param ${label} must be a single drawable character; ignoring it.`,
+          )
+          out[key] = spec.default
+          break
+        }
+        out[key] = value
+        break
+      }
+
+      case 'text': {
+        if (value === undefined) {
+          out[key] = spec.default
+          break
+        }
+        if (typeof value !== 'string') {
+          warn(`Scene param ${label} must be text; ignoring it.`)
+          out[key] = spec.default
+          break
+        }
+        // Anything unprintable would corrupt the line it is rendered on.
+        const cleaned = value.replace(/[^\x20-\x7e]/g, '').trim()
+        if (cleaned.length > spec.maxCols) {
+          warn(
+            `Scene param ${label} is longer than ${spec.maxCols} characters; shortened.`,
+          )
+        }
+        out[key] = cleaned.slice(0, spec.maxCols)
+        break
+      }
+
+      case 'expr': {
+        if (typeof value !== 'string' || value.trim() === '') {
+          warn(
+            `Scene param ${label} must be an expression. Dropping the layer.`,
+          )
+          return null
+        }
+        if (value.length > spec.maxLength) {
+          warn(
+            `Scene param ${label} is longer than ${spec.maxLength} characters. Dropping the layer.`,
+          )
+          return null
+        }
+        out[key] = value
+        break
+      }
+
+      case 'frames': {
+        const outcome = validateFrames(value, spec)
+        if (!outcome.ok) {
+          warn(`Scene param ${label} ${outcome.error}. Dropping the sprite.`)
+          return null
+        }
+        out[key] = outcome.value
+        break
+      }
     }
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
-      warnings.push({
-        type: 'invalid_field',
-        severity: 'warning',
-        theme: themeName,
-        message: `Scene param "${kind}.${key}" must be a number; using the default (${spec.default}).`,
-      })
-      out[key] = spec.default
-      continue
-    }
-    if (value < spec.min || value > spec.max) {
-      const clamped = Math.min(spec.max, Math.max(spec.min, value))
-      warnings.push({
-        type: 'invalid_field',
-        severity: 'warning',
-        theme: themeName,
-        message: `Scene param "${kind}.${key}" is out of range [${spec.min}–${spec.max}]; clamped ${value} to ${clamped}.`,
-      })
-      out[key] = clamped
-      continue
-    }
-    out[key] = value
   }
 
   for (const key of Object.keys(source)) {
-    if (!(key in clamps)) {
-      warnings.push({
-        type: 'invalid_field',
-        severity: 'warning',
-        theme: themeName,
-        message: `Unknown scene param "${kind}.${key}". Ignoring it.`,
-      })
+    if (!Object.hasOwn(table, key)) {
+      warn(`Unknown scene param "${path}.${key}". Ignoring it.`)
     }
   }
 
@@ -200,9 +304,110 @@ function clampSceneParams(
 }
 
 /**
+ * The legacy presets' typed view of coerceParams. Their tables cover every
+ * key of RainParams/PetalsParams by construction, and neither can fail, so
+ * the record is complete and the cast is sound.
+ */
+function clampSceneParams(
+  raw: unknown,
+  clamps: ParamTable,
+  kind: string,
+  themeName: string,
+  warnings: ThemeWarning[],
+): Record<string, number> {
+  return (coerceParams(raw, clamps, kind, themeName, warnings) ?? {}) as Record<
+    string,
+    number
+  >
+}
+
+/**
+ * Turns a parsed scene back into the shape a theme file holds.
+ *
+ * Parsing does not round-trip by itself: a sprite's `frames` becomes a
+ * validated `{frames, width, height}` in memory, and writing that object
+ * straight out would produce a file that no longer loads. `/theme export`
+ * reads from the runtime registry, so this is what stands between a shared
+ * theme and a broken one.
+ *
+ * Writing back the REPAIRED config is deliberate — layers that were dropped
+ * on load stay dropped, out-of-range numbers stay clamped. Exporting a theme
+ * should give you a file that loads without complaint, which is the same
+ * repair-don't-reject discipline the colour validator follows.
+ */
+export function serializeSceneConfig(scene: SceneConfig): unknown {
+  if (scene.kind !== 'custom') return scene
+  const { label, fields, sprites, shaders } = scene.scene
+  const out: Record<string, unknown> = { kind: 'custom' }
+  if (label !== '') out.label = label
+  if (fields.length > 0) out.fields = fields
+  if (sprites.length > 0) {
+    out.sprites = sprites.map(s => ({
+      ...s,
+      // Back to the array-of-rows the file format uses.
+      frames: s.frames.frames,
+    }))
+  }
+  if (shaders.length > 0) out.shaders = shaders
+  return out
+}
+
+/**
+ * Parses one array of layers, dropping the ones that cannot be salvaged.
+ *
+ * Excess layers are trimmed rather than rejected: a scene with five fields is
+ * a scene the model got slightly carried away with, not a broken file.
+ */
+function parseLayers(
+  raw: unknown,
+  table: ParamTable,
+  pathBase: string,
+  max: number,
+  themeName: string,
+  warnings: ThemeWarning[],
+): Record<string, unknown>[] {
+  if (raw === undefined) return []
+  if (!Array.isArray(raw)) {
+    warnings.push({
+      type: 'invalid_field',
+      severity: 'warning',
+      theme: themeName,
+      message: `"${pathBase}" must be an array. Ignoring it.`,
+    })
+    return []
+  }
+  if (raw.length > max) {
+    warnings.push({
+      type: 'invalid_field',
+      severity: 'warning',
+      theme: themeName,
+      message: `"${pathBase}" has ${raw.length} layers; only the first ${max} are used.`,
+    })
+  }
+
+  const out: Record<string, unknown>[] = []
+  for (let i = 0; i < Math.min(raw.length, max); i++) {
+    const layer = coerceParams(
+      raw[i],
+      table,
+      `${pathBase}[${i}]`,
+      themeName,
+      warnings,
+    )
+    if (layer !== null) out.push(layer)
+  }
+  return out
+}
+
+/**
  * Parses the optional `scene` field. Unknown kinds warn and yield undefined
  * (forward compatibility: a theme written for a newer build still loads, just
  * without its animation).
+ *
+ * Layers win over `kind`. A model that fills in `fields` and leaves `kind` at
+ * "rain" meant the fields — and asking it to keep a redundant discriminator
+ * in step with the rest of its answer is asking for a bug report rather than
+ * a theme.
  */
 function parseSceneConfig(
   raw: unknown,
@@ -217,6 +422,71 @@ function parseSceneConfig(
       theme: themeName,
       message:
         '"scene" must be an object like { "kind": "rain" }. Ignoring it.',
+    })
+    return undefined
+  }
+
+  const fields = parseLayers(
+    raw.fields,
+    FIELD_PARAMS,
+    'scene.fields',
+    MAX_FIELDS,
+    themeName,
+    warnings,
+  ) as unknown as FieldLayer[]
+
+  const sprites = parseLayers(
+    raw.sprites,
+    SPRITE_PARAMS,
+    'scene.sprites',
+    MAX_SPRITES,
+    themeName,
+    warnings,
+  ) as unknown as SpriteLayer[]
+
+  const shaders = parseLayers(
+    raw.shaders,
+    SHADER_PARAMS,
+    'scene.shaders',
+    MAX_SHADERS,
+    themeName,
+    warnings,
+  ) as unknown as ShaderLayer[]
+
+  if (fields.length > 0 || sprites.length > 0 || shaders.length > 0) {
+    if (raw.kind !== undefined && raw.kind !== 'custom') {
+      warnings.push({
+        type: 'invalid_field',
+        severity: 'warning',
+        theme: themeName,
+        message: `"scene" declares kind ${JSON.stringify(raw.kind)} but also has layers; the layers win.`,
+      })
+    }
+    const meta = coerceParams(
+      { label: raw.label },
+      SCENE_PARAMS,
+      'scene',
+      themeName,
+      warnings,
+    )
+    return {
+      kind: 'custom',
+      scene: {
+        label: (meta?.label as string) ?? '',
+        fields,
+        sprites,
+        shaders,
+      },
+    }
+  }
+
+  if (raw.kind === 'custom') {
+    warnings.push({
+      type: 'invalid_field',
+      severity: 'warning',
+      theme: themeName,
+      message: 'A custom scene needs at least one layer. Ignoring it.',
+      suggestion: 'Add a "fields", "sprites" or "shaders" array.',
     })
     return undefined
   }

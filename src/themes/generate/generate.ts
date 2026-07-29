@@ -32,6 +32,7 @@ import {
   buildThemeUserPrompt,
   type GenerationRequest,
 } from './prompt.js'
+import { buildSceneToolSchema } from './sceneToolSchema.js'
 
 const CREATE_THEME_TOOL = {
   name: 'create_theme',
@@ -55,21 +56,7 @@ const CREATE_THEME_TOOL = {
           'Map of slot name to colour value. Prefer rgb(r,g,b). Set as many slots as you can; omitted slots are filled from the built-in theme.',
         additionalProperties: { type: 'string' },
       },
-      scene: {
-        type: 'object',
-        description:
-          'Animated background matched to the mood: kind "rain" (falling glyph streams), "petals" (drifting particles) or "none" (still). params.intensity 0.15-1 is the opacity of the effect; 0.55 reads as a quiet backdrop.',
-        properties: {
-          kind: { type: 'string', enum: ['none', 'rain', 'petals'] },
-          params: {
-            type: 'object',
-            description:
-              'Optional numeric overrides, e.g. {"intensity": 0.55}. Omitted values get defaults; out-of-range values are clamped.',
-            additionalProperties: { type: 'number' },
-          },
-        },
-        required: ['kind'],
-      },
+      scene: buildSceneToolSchema(),
     },
     required: ['mode', 'colors'],
   },
@@ -77,10 +64,24 @@ const CREATE_THEME_TOOL = {
 
 /**
  * Body text is the largest single cost — a full palette is roughly 70 slots of
- * ~10 tokens each plus JSON structure. 4096 leaves comfortable headroom
- * without inviting the model to pad.
+ * ~10 tokens each plus JSON structure, so ~1k tokens of actual payload.
+ *
+ * The ceiling is set far above that on purpose. Truncation is the one failure
+ * this module cannot degrade gracefully: every other problem (unknown slots,
+ * missing slots, out-of-range params, prose instead of a tool call) is
+ * repaired or backfilled, but a tool_use block cut off mid-object yields
+ * unparseable input and the whole generation is lost. Since output tokens are
+ * only billed for what is actually produced, headroom is nearly free — and a
+ * reasoning model that thinks before emitting the palette spends from the same
+ * budget, which is what made the old 4096 tight.
+ *
+ * Capped at 16384 rather than higher because sideQuery forwards `max_tokens`
+ * to the OpenAI/Gemini/Grok adapters unclamped, and several of those endpoints
+ * reject a value above the model's own output ceiling with a hard 400. 16384
+ * clears every first-party Claude model and sits exactly at the common
+ * compat-layer ceiling, so headroom never costs availability.
  */
-const MAX_TOKENS = 4096
+const MAX_TOKENS = 16384
 
 export type GenerationResult =
   | {
@@ -165,12 +166,18 @@ export async function generateTheme(
     }
   }
 
+  // Truncation is reported before parsing, because a cut-off tool_use block
+  // fails in exactly the same way as a model that ignored the tool — and
+  // "rephrase your description" is useless advice for a length problem.
+  const truncated = response.stop_reason === 'max_tokens'
+
   const raw = extractThemeObject(response)
   if (raw === null) {
     return {
       ok: false,
-      error:
-        'The model did not return a theme. Try rephrasing the description.',
+      error: truncated
+        ? `The theme was cut off before it finished (hit the ${MAX_TOKENS}-token limit). Try a shorter description.`
+        : 'The model did not return a theme. Try rephrasing the description.',
     }
   }
 
@@ -181,7 +188,12 @@ export async function generateTheme(
   const parsed = parseThemeFile(normalizeThemeColors(raw), request.name)
   if (!parsed.ok) {
     const detail = parsed.warnings[0]?.message ?? 'unrecognised shape'
-    return { ok: false, error: `The model's theme was unusable: ${detail}` }
+    return {
+      ok: false,
+      error: truncated
+        ? `The theme was cut off before it finished (hit the ${MAX_TOKENS}-token limit). Try a shorter description.`
+        : `The model's theme was unusable: ${detail}`,
+    }
   }
 
   const authoredSlotCount = Object.keys(parsed.theme.colors).length

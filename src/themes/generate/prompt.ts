@@ -16,8 +16,25 @@
  * theme can be opened and tweaked afterwards.
  */
 
+import { FUNCTIONS } from '../../scene/expr/index.js'
+import { GLYPH_CATALOG_NAMES, glyphCatalog } from '../../scene/glyphs.js'
+import {
+  FADE_MODES,
+  FIELD_PARAMS,
+  MAX_FIELDS,
+  MAX_SHADERS,
+  MAX_SPRITES,
+  MOTION_VERBS,
+  type ParamTable,
+  PATH_VERBS,
+  SCENE_COLOR_SLOTS,
+  SHADER_PARAMS,
+  SPRITE_PARAMS,
+  type Verb,
+} from '../../scene/grammar.js'
 import matrix from '../bundled/matrix.json'
 import sakura from '../bundled/sakura.json'
+import voltage from '../bundled/voltage.json'
 import { getKnownSlotNames } from '../schema.js'
 import { KEY_SLOT_DOCS, SLOT_FAMILIES, THEME_DISCIPLINE } from './slotDocs.js'
 
@@ -113,6 +130,188 @@ function renderExample(
   ].join('\n')
 }
 
+function renderVerbs(verbs: readonly Verb[]): string {
+  return verbs.map(v => `- \`${v.name}\` — ${v.reads}`).join('\n')
+}
+
+function renderCatalogs(): string {
+  const lines: string[] = []
+  for (const name of GLYPH_CATALOG_NAMES) {
+    const chars = glyphCatalog(name) ?? ''
+    const sample = [...chars].slice(0, 12).join('')
+    lines.push(`- \`${name}\` — ${sample}`)
+  }
+  return lines.join('\n')
+}
+
+/**
+ * Renders a parameter table as prose.
+ *
+ * The ranges here come from the same table the loader clamps against and the
+ * editor schema advertises. The old prompt wrote "intensity (0.15–1)" by hand
+ * next to a clamp table that was free to disagree with it.
+ */
+function renderParams(table: ParamTable, skip: readonly string[] = []): string {
+  const lines: string[] = []
+  for (const [key, spec] of Object.entries(table)) {
+    if (skip.includes(key)) continue
+    let range: string
+    switch (spec.type) {
+      case 'number':
+      case 'int':
+        range = `${spec.min}–${spec.max}, default ${spec.default}`
+        break
+      case 'enum':
+        range = `${spec.values.join(' | ')}`
+        break
+      case 'slot':
+        range = `a colour slot, default ${spec.default}`
+        break
+      case 'char':
+        range = 'one character, or "" for none'
+        break
+      case 'text':
+        range = `up to ${spec.maxCols} characters`
+        break
+      case 'expr':
+        range = `up to ${spec.maxLength} characters`
+        break
+      case 'frames':
+        range = `up to ${spec.maxFrames} frames, ${spec.maxRows} rows, ${spec.maxCols} columns`
+        break
+    }
+    lines.push(`- \`${key}\` (${range}) — ${spec.describe}`)
+  }
+  return lines.join('\n')
+}
+
+function renderFunctions(): string {
+  const byArity = new Map<number, string[]>()
+  for (const [name, arity] of FUNCTIONS) {
+    const list = byArity.get(arity) ?? []
+    list.push(name)
+    byArity.set(arity, list)
+  }
+  return [...byArity.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(
+      ([arity, names]) =>
+        `- ${arity} argument${arity === 1 ? '' : 's'}: ${names.map(n => `\`${n}\``).join(', ')}`,
+    )
+    .join('\n')
+}
+
+/**
+ * The scene half of the prompt.
+ *
+ * What used to be here was a menu: three primitives, each annotated with the
+ * moods it suited. Asking for "cyberpunk" therefore produced matrix's rain in
+ * a different colour, every time, because the prompt said cyber meant rain.
+ * The menu is gone. What replaces it is a vocabulary and the instruction to
+ * design with it.
+ */
+function renderSceneSection(): string {
+  return `## The animation
+
+Design the motion the way you design the palette: from the idea, not from a
+menu. A scene is drawn faintly behind the conversation, and its colours are
+derived from your palette automatically, so it always matches the theme.
+
+Three kinds of layer, and most good scenes use two or three in combination —
+one ambient texture, one accent, sometimes one subject:
+
+- **fields** (up to ${MAX_FIELDS}) — particles. Use for TEXTURE: weather, circuitry,
+  static, embers, stars, dust.
+- **sprites** (up to ${MAX_SPRITES}) — art you draw yourself, animated along a path. Use
+  for a SUBJECT: a creature, an object, a character. If the vibe names a
+  thing, draw the thing.
+- **shaders** (up to ${MAX_SHADERS}) — a maths expression evaluated per cell. Use for a
+  RHYTHM the other two cannot express: interference, waves, plasma, pulses.
+
+It is still data, not code — names and bounded numbers, plus arithmetic in the
+shader — which is what makes a theme safe to share.
+
+### Field motions
+
+${renderVerbs(MOTION_VERBS)}
+
+### Fade modes
+
+${renderVerbs(FADE_MODES)}
+
+### Glyph catalogs
+
+${renderCatalogs()}
+
+\`braille\` is the densest but renders blank in fonts without a Braille face;
+prefer it only when the idea really calls for it.
+
+### Field parameters
+
+${renderParams(FIELD_PARAMS)}
+
+### Sprite parameters
+
+Frames are rows of characters, every row the same width and every frame the
+same size. **A space is transparent**, so the sprite has a silhouette rather
+than a rectangle — draw with that in mind. Use plain ASCII, box drawing
+(\`─│┌┐└┘├┤┼\`), blocks (\`█▓▒░\`) and arrows; emoji and any wide character are
+rejected on load.
+
+${renderParams(SPRITE_PARAMS)}
+
+A spider descending on its silk, which is what \`trailChar\` is for — on a
+\`descend\` path the line already travelled IS the thread:
+
+\`\`\`json
+{
+  "frames": [
+    [" /\\\\_/\\\\ ", "( o.o )", " /| |\\\\ "],
+    [" /\\\\_/\\\\ ", "( -.- )", " \\\\| |/ "]
+  ],
+  "framePeriod": 7, "path": "descend", "pathPeriod": 520,
+  "x": 0.84, "y": 0, "span": 0.72,
+  "trailChar": "|", "trailColor": "subtle",
+  "color": "error", "intensity": 0.85
+}
+\`\`\`
+
+### Sprite paths
+
+${renderVerbs(PATH_VERBS)}
+
+### Shader parameters
+
+${renderParams(SHADER_PARAMS)}
+
+The expression gets \`u\` and \`v\` (0–1 across and down), \`x\` and \`y\` (cells),
+\`t\` (ticks, 10 per second), \`w\`, \`h\`, \`i\`, and the constants \`pi\`, \`tau\`, \`e\`.
+**Prefer \`u\` and \`v\`** — \`sin(x/6)\` looks different on an 80-column terminal
+and a 200-column one, \`sin(u*13)\` does not. Arithmetic is \`+ - * / % ^\`,
+comparisons return 0 or 1, and \`cond ? a : b\` works. Functions:
+
+${renderFunctions()}
+
+### Colour slots a layer may use
+
+${SCENE_COLOR_SLOTS.map(s => `\`${s}\``).join(', ')}
+
+### What not to do
+
+- No emoji or wide characters anywhere — they corrupt the terminal grid and
+  are rejected on load.
+- There are no backgrounds and no bold: layers paint foreground text only. A
+  solid neon slab has to be built from block glyphs (\`█▓▒░\`).
+- Do not set every parameter. The defaults are tuned; set what the idea needs.
+- Keep the total intensity modest. Intensity is per-layer and adds up, and a
+  scene that spends more than about 1.6 across its layers is scaled back down
+  automatically — better to choose the balance yourself.
+- Name the scene with \`label\`: two or three words, like a track title.
+
+Include a scene unless the idea genuinely asks for stillness (paper, minimal,
+zen), in which case \`{"kind": "none"}\`.`
+}
+
 export type GenerationRequest = {
   /** What the user asked for, verbatim. */
   vibe: string
@@ -168,35 +367,19 @@ contexts: ${renderRemainingSlots()}
   top of them remains readable.
 - Do not invent slot names. Anything unrecognised is discarded.
 
-## Animated scene
-
-A theme may include an animated background, drawn faintly behind the
-conversation. It is data, not code: a primitive name plus bounded numbers.
-The animation's colours are derived from your palette automatically, so it
-always matches the theme.
-
-- \`"scene": { "kind": "rain" }\` — falling glyph streams. Fits electric,
-  cyber, stormy, hacker, neon moods.
-- \`"scene": { "kind": "petals" }\` — drifting, swaying particles. Fits
-  organic, gentle, floral, snowy, autumnal moods.
-- \`"scene": { "kind": "none" }\` — still. Reserve this for moods that ask
-  for stillness (paper, minimal, zen).
-
-Default to including one — an animated backdrop is this product's signature.
-The one parameter worth setting is \`params.intensity\` (0.15–1), the
-opacity of the whole effect: 1 competes with the conversation text, 0.5–0.7
-reads as a quiet backdrop. \`{ "kind": "rain", "params": { "intensity": 0.55 } }\`
-is a good default.
+${renderSceneSection()}
 
 ## Worked examples
 
-These are two themes that ship with Claude Code. Note how each picks one
-signature hue, gives tools a cooler accent, spends one warm hue, and keeps red
-for failure — the same discipline applied to completely different moods.
+These are themes that ship with Claude Code. Note how each picks one signature
+hue, gives tools a cooler accent, spends one warm hue, and keeps red for
+failure — the same discipline applied to completely different moods.
 
 ${renderExample('matrix', matrix)}
 
 ${renderExample('sakura', sakura)}
+
+${renderExample('voltage', voltage)}
 
 ## Output
 

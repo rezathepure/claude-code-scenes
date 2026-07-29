@@ -1,9 +1,9 @@
 /**
  * Derives scene colours from the theme palette.
  *
- * Scenes add no colour slots to the theme format. A rain ramp is computed
- * from the theme's own `claude` accent (its hue, walked down in Oklab
- * lightness), petal tints are blends of `claude` and `claudeShimmer` — so a
+ * Scenes add no colour slots to the theme format. A layer names a slot the
+ * palette already has and the ramp is computed from it — a hue walked down in
+ * Oklab lightness, or a blend toward that slot's shimmer partner — so a
  * generated crimson theme gets crimson rain with zero extra configuration,
  * and the "one theme = one idea" discipline survives the animation.
  *
@@ -50,7 +50,21 @@ export function deriveRainStyles(
   ink: SceneStyleInterner,
   intensity = 1,
 ): { head: number; ramp: number[] } {
-  const accent = parseColor(theme.claude ?? '') ?? FALLBACK_ACCENT
+  return deriveRampStyles(theme, ink, 'claude', intensity)
+}
+
+/**
+ * A ramp walked down in Oklab lightness from any palette slot — the rain
+ * derivation, generalised so a layer can key off `error` or `suggestion`
+ * instead of always the primary accent.
+ */
+function deriveRampStyles(
+  theme: Record<string, string>,
+  ink: SceneStyleInterner,
+  slot: string,
+  intensity = 1,
+): { head: number; ramp: number[] } {
+  const accent = parseColor(theme[slot] ?? '') ?? FALLBACK_ACCENT
   const { c, h } = rgbToOklch(accent)
   const chroma = Math.min(c, 0.25) * intensity
 
@@ -76,10 +90,28 @@ export function derivePetalStyles(
   ink: SceneStyleInterner,
   intensity = 1,
 ): { tints: number[] } {
-  const a = rgbToOklab(parseColor(theme.claude ?? '') ?? FALLBACK_ACCENT)
-  const b = rgbToOklab(
-    parseColor(theme.claudeShimmer ?? '') ?? FALLBACK_SHIMMER,
-  )
+  return { tints: deriveTintStyles(theme, ink, 'claude', intensity) }
+}
+
+/**
+ * Four tints lerped from a slot toward its shimmer partner — the petal
+ * derivation, generalised. A slot without a `<slot>Shimmer` sibling blends
+ * toward a lightened version of itself, so every slot in SCENE_COLOR_SLOTS
+ * yields four distinct tints rather than four copies of one.
+ */
+function deriveTintStyles(
+  theme: Record<string, string>,
+  ink: SceneStyleInterner,
+  slot: string,
+  intensity = 1,
+): number[] {
+  const base = parseColor(theme[slot] ?? '') ?? FALLBACK_ACCENT
+  const partner =
+    parseColor(theme[`${slot}Shimmer`] ?? '') ??
+    lighten(base) ??
+    FALLBACK_SHIMMER
+  const a = rgbToOklab(base)
+  const b = rgbToOklab(partner)
 
   const tints: number[] = []
   for (const t of [0, 1 / 3, 2 / 3, 1]) {
@@ -95,5 +127,55 @@ export function derivePetalStyles(
       ),
     )
   }
-  return { tints }
+  return tints
+}
+
+/** A visibly lighter version of a colour, for slots with no shimmer sibling. */
+function lighten(c: Rgb): Rgb {
+  const { l, a, b } = rgbToOklab(c)
+  return oklabToRgb({ l: Math.min(1, l + 0.28), a: a * 0.7, b: b * 0.7 })
+}
+
+/**
+ * Exactly one interned style for a slot at a given opacity.
+ *
+ * Sprites want a flat colour, not a ramp — and interning seven styles for a
+ * three-row spider would spend the process-wide style budget on nothing.
+ */
+export function deriveSolidStyle(
+  theme: Record<string, string>,
+  ink: SceneStyleInterner,
+  slot: string,
+  intensity: number,
+): number {
+  const base = rgbToOklab(parseColor(theme[slot] ?? '') ?? FALLBACK_ACCENT)
+  return ink.internSceneStyle(
+    fmt(
+      oklabToRgb({
+        l: base.l * intensity,
+        a: base.a * intensity,
+        b: base.b * intensity,
+      }),
+    ),
+  )
+}
+
+/**
+ * The styles one field layer paints with.
+ *
+ * `flat` gives each particle a fixed tint for life (petals); everything else
+ * wants a ramp it can index by trail depth or by its own clock.
+ */
+export function deriveFieldStyles(
+  theme: Record<string, string>,
+  ink: SceneStyleInterner,
+  slot: string,
+  fade: string,
+  intensity: number,
+): { head: number; ramp: number[] } {
+  if (fade === 'flat') {
+    const tints = deriveTintStyles(theme, ink, slot, intensity)
+    return { head: tints[0] ?? 0, ramp: tints }
+  }
+  return deriveRampStyles(theme, ink, slot, intensity)
 }
