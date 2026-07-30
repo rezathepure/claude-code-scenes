@@ -47,8 +47,14 @@ export function modelSupportsEffort(model: string): boolean {
   ) {
     return true
   }
-  // Supported by a subset of Claude 4 models
+  // Supported by the Claude 5 generation and a subset of Claude 4 models.
+  // These must stay above the legacy exclusion below: every one of them
+  // contains 'opus' or 'sonnet' and would otherwise be denied.
   if (
+    m.includes('opus-5') ||
+    m.includes('sonnet-5') ||
+    m.includes('fable-5') ||
+    m.includes('opus-4-8') ||
     m.includes('opus-4-7') ||
     m.includes('opus-4-6') ||
     m.includes('sonnet-4-6') ||
@@ -358,7 +364,17 @@ export function getDefaultEffortForModel(
 
   // Default effort on Opus 4.6 to medium for Pro.
   // Max/Team also get medium when the tengu_grey_step2 config is enabled.
+  //
+  // The Claude 5 generation shares this branch: official's catalogue records
+  // default_effort "high" for Opus 5, Sonnet 5 and Fable 5. Everything that
+  // falls past here returns undefined, which the API also reads as high — so
+  // this exists to make the picker print "(default)" against the right level,
+  // not to change what is sent.
   if (
+    model.toLowerCase().includes('opus-5') ||
+    model.toLowerCase().includes('sonnet-5') ||
+    model.toLowerCase().includes('fable-5') ||
+    model.toLowerCase().includes('opus-4-8') ||
     model.toLowerCase().includes('opus-4-7') ||
     model.toLowerCase().includes('opus-4-6')
   ) {

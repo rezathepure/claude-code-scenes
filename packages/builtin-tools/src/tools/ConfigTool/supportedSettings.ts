@@ -103,7 +103,7 @@ export const SUPPORTED_SETTINGS: Record<string, SettingConfig> = {
           .filter(o => o.value !== null)
           .map(o => o.value as string)
       } catch {
-        return ['sonnet', 'opus', 'haiku']
+        return ['sonnet', 'opus', 'haiku', 'fable']
       }
     },
     validateOnWrite: v => validateModel(String(v)),

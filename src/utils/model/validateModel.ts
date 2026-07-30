@@ -145,6 +145,19 @@ function get3PFallbackSuggestion(model: string): string | undefined {
     return undefined
   }
   const lowerModel = model.toLowerCase()
+  // Fable first — official's catalogue records claude-opus-5 as its 3P fallback.
+  if (lowerModel.includes('fable-5') || lowerModel.includes('fable_5')) {
+    return getModelStrings().opus5
+  }
+  if (lowerModel.includes('opus-5') || lowerModel.includes('opus_5')) {
+    return getModelStrings().opus47
+  }
+  if (lowerModel.includes('sonnet-5') || lowerModel.includes('sonnet_5')) {
+    return getModelStrings().sonnet46
+  }
+  if (lowerModel.includes('opus-4-8') || lowerModel.includes('opus_4_8')) {
+    return getModelStrings().opus47
+  }
   if (lowerModel.includes('opus-4-7') || lowerModel.includes('opus_4_7')) {
     return getModelStrings().opus46
   }

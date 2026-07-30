@@ -14,6 +14,17 @@ describe('isModelAlias', () => {
     expect(isModelAlias('haiku')).toBe(true)
   })
 
+  test('returns true for "fable"', () => {
+    // Load-bearing: without this, parseUserSpecifiedModel falls through to its
+    // "preserve original case for custom model names" branch and hands the
+    // literal string 'fable' to the API.
+    expect(isModelAlias('fable')).toBe(true)
+  })
+
+  test('returns true for "fable[1m]"', () => {
+    expect(isModelAlias('fable[1m]')).toBe(true)
+  })
+
   test('returns true for "best"', () => {
     expect(isModelAlias('best')).toBe(true)
   })
@@ -54,6 +65,12 @@ describe('isModelFamilyAlias', () => {
 
   test('returns true for "haiku"', () => {
     expect(isModelFamilyAlias('haiku')).toBe(true)
+  })
+
+  test('returns true for "fable"', () => {
+    // Makes ["fable"] work as an allowlist wildcard over any fable version,
+    // and lets ["fable", "fable-5"] narrow rather than match independently.
+    expect(isModelFamilyAlias('fable')).toBe(true)
   })
 
   test('returns false for "best"', () => {

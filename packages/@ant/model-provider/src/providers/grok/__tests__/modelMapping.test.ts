@@ -69,4 +69,17 @@ describe('resolveGrokModel', () => {
       'grok-4.20-reasoning',
     )
   })
+
+  test('maps the Claude 5 generation rather than passing it through', () => {
+    expect(resolveGrokModel('claude-opus-5')).toBe('grok-4.20-reasoning')
+    expect(resolveGrokModel('claude-sonnet-5')).toBe('grok-3-mini-fast')
+    expect(resolveGrokModel('claude-fable-5')).toBe('grok-4.20-reasoning')
+    expect(resolveGrokModel('claude-opus-4-8')).toBe('grok-4.20-reasoning')
+  })
+
+  test('falls back to the fable family default for an unlisted fable', () => {
+    // Without a DEFAULT_FAMILY_MAP.fable entry this returns the raw string,
+    // since the family lookup is what gates the fallback.
+    expect(resolveGrokModel('claude-fable-99')).toBe('grok-4.20-reasoning')
+  })
 })

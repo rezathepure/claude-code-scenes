@@ -10,14 +10,25 @@ const DEFAULT_MODEL_MAP: Record<string, string> = {
   'claude-opus-4-1-20250805': 'o3',
   'claude-opus-4-5-20251101': 'o3',
   'claude-opus-4-6': 'o3',
+  'claude-opus-4-7': 'o3',
+  'claude-opus-4-8': 'o3',
+  'claude-opus-5': 'o3',
+  'claude-fable-5': 'o3',
+  'claude-sonnet-5': 'gpt-4o',
   'claude-haiku-4-5-20251001': 'gpt-4o-mini',
   'claude-3-5-haiku-20241022': 'gpt-4o-mini',
   'claude-3-7-sonnet-20250219': 'gpt-4o',
   'claude-3-5-sonnet-20241022': 'gpt-4o',
 }
 
-function getModelFamily(model: string): 'haiku' | 'sonnet' | 'opus' | null {
+// Fable is tested before opus: it is the only family whose name shares no
+// substring with another, but leaving it unmatched means resolveOpenAIModel
+// hands the raw 'claude-fable-5' to an OpenAI endpoint, which 404s.
+function getModelFamily(
+  model: string,
+): 'haiku' | 'sonnet' | 'opus' | 'fable' | null {
   if (/haiku/i.test(model)) return 'haiku'
+  if (/fable/i.test(model)) return 'fable'
   if (/opus/i.test(model)) return 'opus'
   if (/sonnet/i.test(model)) return 'sonnet'
   return null

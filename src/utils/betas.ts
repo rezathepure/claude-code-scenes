@@ -106,8 +106,14 @@ export function modelSupportsISP(model: string): boolean {
   if (provider === 'firstParty') {
     return !canonical.includes('claude-3-')
   }
+  // The Claude 5 IDs contain neither 'claude-opus-4' nor 'claude-sonnet-4', so
+  // omitting them here drops the interleaved-thinking header on Bedrock/Vertex.
   return (
-    canonical.includes('claude-opus-4') || canonical.includes('claude-sonnet-4')
+    canonical.includes('claude-opus-4') ||
+    canonical.includes('claude-sonnet-4') ||
+    canonical.includes('claude-opus-5') ||
+    canonical.includes('claude-sonnet-5') ||
+    canonical.includes('claude-fable-5')
   )
 }
 
@@ -117,7 +123,10 @@ function vertexModelSupportsWebSearch(model: string): boolean {
   return (
     canonical.includes('claude-opus-4') ||
     canonical.includes('claude-sonnet-4') ||
-    canonical.includes('claude-haiku-4')
+    canonical.includes('claude-haiku-4') ||
+    canonical.includes('claude-opus-5') ||
+    canonical.includes('claude-sonnet-5') ||
+    canonical.includes('claude-fable-5')
   )
 }
 
@@ -131,14 +140,21 @@ export function modelSupportsContextManagement(model: string): boolean {
   if (provider === 'firstParty') {
     return !canonical.includes('claude-3-')
   }
+  // Opus 5 and Sonnet 5 declare context_management in official's catalogue;
+  // Fable 5 does not, so it is deliberately absent from this 3P list.
   return (
     canonical.includes('claude-opus-4') ||
     canonical.includes('claude-sonnet-4') ||
-    canonical.includes('claude-haiku-4')
+    canonical.includes('claude-haiku-4') ||
+    canonical.includes('claude-opus-5') ||
+    canonical.includes('claude-sonnet-5')
   )
 }
 
 // @[MODEL LAUNCH]: Add the new model ID to this list if it supports structured outputs.
+// Deliberately omitted for the Claude 5 generation: official Claude Code's
+// capability lists for Opus 5, Sonnet 5 and Fable 5 do not include structured
+// outputs, so claiming it here would send a beta the API has not agreed to.
 export function modelSupportsStructuredOutputs(model: string): boolean {
   const canonical = getCanonicalName(model)
   const provider = getAPIProvider()

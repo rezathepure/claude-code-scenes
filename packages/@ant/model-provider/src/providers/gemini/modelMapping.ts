@@ -1,5 +1,11 @@
-function getModelFamily(model: string): 'haiku' | 'sonnet' | 'opus' | null {
+// Fable is tested before opus. Without it, an unmatched family returns the raw
+// 'claude-fable-5' from resolveGeminiModel below — worse than the throw, since
+// the throw is the branch that tells the user which env var to set.
+function getModelFamily(
+  model: string,
+): 'haiku' | 'sonnet' | 'opus' | 'fable' | null {
   if (/haiku/i.test(model)) return 'haiku'
+  if (/fable/i.test(model)) return 'fable'
   if (/opus/i.test(model)) return 'opus'
   if (/sonnet/i.test(model)) return 'sonnet'
   return null

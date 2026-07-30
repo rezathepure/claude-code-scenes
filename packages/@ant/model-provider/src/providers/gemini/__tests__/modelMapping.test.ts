@@ -97,4 +97,23 @@ describe('resolveGeminiModel', () => {
       'Gemini provider requires GEMINI_MODEL or GEMINI_DEFAULT_SONNET_MODEL (or ANTHROPIC_DEFAULT_SONNET_MODEL for backward compatibility) to be configured.',
     )
   })
+
+  test('recognises fable as its own family', () => {
+    // An unrecognised family returns the raw model name, which reaches the
+    // Gemini endpoint as 'claude-fable-5' and 404s. Being recognised means the
+    // user gets the actionable throw instead.
+    expect(() => resolveGeminiModel('claude-fable-5')).toThrow(
+      'GEMINI_DEFAULT_FABLE_MODEL',
+    )
+    process.env.GEMINI_DEFAULT_FABLE_MODEL = 'gemini-3-ultra'
+    expect(resolveGeminiModel('claude-fable-5')).toBe('gemini-3-ultra')
+    delete process.env.GEMINI_DEFAULT_FABLE_MODEL
+  })
+
+  test('resolves the Claude 5 opus and sonnet families', () => {
+    process.env.GEMINI_DEFAULT_OPUS_MODEL = 'gemini-2.5-pro'
+    process.env.GEMINI_DEFAULT_SONNET_MODEL = 'gemini-2.5-flash'
+    expect(resolveGeminiModel('claude-opus-5')).toBe('gemini-2.5-pro')
+    expect(resolveGeminiModel('claude-sonnet-5')).toBe('gemini-2.5-flash')
+  })
 })

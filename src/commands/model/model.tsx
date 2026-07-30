@@ -21,8 +21,11 @@ import { MODEL_ALIASES } from '../../utils/model/aliases.js';
 import { checkOpus1mAccess, checkSonnet1mAccess } from '../../utils/model/check1mAccess.js';
 import {
   getDefaultMainLoopModelSetting,
+  getDefaultOpusModel,
+  getDefaultSonnetModel,
   isOpus1mMergeEnabled,
   renderDefaultModelSetting,
+  renderModelName,
 } from '../../utils/model/model.js';
 import { isModelAllowed } from '../../utils/model/modelAllowlist.js';
 import { validateModel } from '../../utils/model/validateModel.js';
@@ -128,9 +131,11 @@ function SetModelAndClose({
       }
 
       // @[MODEL LAUNCH]: Update check for 1M access.
+      // Names are resolved rather than spelled out — these fired for whatever
+      // the alias pointed at, so a hardcoded version went stale every launch.
       if (model && isOpus1mUnavailable(model)) {
         onDone(
-          `Opus 4.7 with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`,
+          `${renderModelName(getDefaultOpusModel())} with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`,
           { display: 'system' },
         );
         return;
@@ -138,7 +143,7 @@ function SetModelAndClose({
 
       if (model && isSonnet1mUnavailable(model)) {
         onDone(
-          `Sonnet 4.6 with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`,
+          `${renderModelName(getDefaultSonnetModel())} with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`,
           { display: 'system' },
         );
         return;
@@ -229,9 +234,11 @@ function isOpus1mUnavailable(model: string): boolean {
 
 function isSonnet1mUnavailable(model: string): boolean {
   const m = model.toLowerCase();
-  // Warn about Sonnet and Sonnet 4.6, but not Sonnet 4.5 since that had
-  // a different access criteria.
-  return !checkSonnet1mAccess() && (m.includes('sonnet[1m]') || m.includes('sonnet-4-6[1m]'));
+  // Warn about Sonnet 5, Sonnet 4.6 and the bare alias, but not Sonnet 4.5,
+  // since that had different access criteria.
+  return (
+    !checkSonnet1mAccess() && (m.includes('sonnet[1m]') || m.includes('sonnet-5[1m]') || m.includes('sonnet-4-6[1m]'))
+  );
 }
 
 function ShowModelAndClose({ onDone }: { onDone: (result?: string) => void }): React.ReactNode {

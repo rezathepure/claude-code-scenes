@@ -12,6 +12,11 @@ const DEFAULT_MODEL_MAP: Record<string, string> = {
   'claude-opus-4-1-20250805': 'grok-4.20-reasoning',
   'claude-opus-4-5-20251101': 'grok-4.20-reasoning',
   'claude-opus-4-6': 'grok-4.20-reasoning',
+  'claude-opus-4-7': 'grok-4.20-reasoning',
+  'claude-opus-4-8': 'grok-4.20-reasoning',
+  'claude-opus-5': 'grok-4.20-reasoning',
+  'claude-fable-5': 'grok-4.20-reasoning',
+  'claude-sonnet-5': 'grok-3-mini-fast',
   'claude-haiku-4-5-20251001': 'grok-3-mini-fast',
   'claude-3-5-haiku-20241022': 'grok-3-mini-fast',
   'claude-3-7-sonnet-20250219': 'grok-3-mini-fast',
@@ -22,10 +27,17 @@ const DEFAULT_FAMILY_MAP: Record<string, string> = {
   opus: 'grok-4.20-reasoning',
   sonnet: 'grok-3-mini-fast',
   haiku: 'grok-3-mini-fast',
+  fable: 'grok-4.20-reasoning',
 }
 
-function getModelFamily(model: string): 'haiku' | 'sonnet' | 'opus' | null {
+// Fable is tested before opus: it is the only family whose name shares no
+// substring with another, but leaving it unmatched means the raw
+// 'claude-fable-5' is passed through to the Grok endpoint, which 404s.
+function getModelFamily(
+  model: string,
+): 'haiku' | 'sonnet' | 'opus' | 'fable' | null {
   if (/haiku/i.test(model)) return 'haiku'
+  if (/fable/i.test(model)) return 'fable'
   if (/opus/i.test(model)) return 'opus'
   if (/sonnet/i.test(model)) return 'sonnet'
   return null

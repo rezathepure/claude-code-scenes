@@ -10,15 +10,17 @@ import { getOpus46Option } from '../modelOptions.js'
 import { getModelStrings } from '../modelStrings.js'
 
 /**
- * Verifies getDefaultOpusModel() returns Opus 4.7 across all providers
- * (firstParty + Bedrock/Vertex/Foundry). This is the Gap #2 assertion:
- * as of 2026-04-17 all 3P vendors have published Opus 4.7, so the fork
- * must not fall back to Opus 4.6 on 3P.
+ * What `opus` resolves to, per provider.
  *
- * Authoritative sources for 3P availability:
- *   - AWS Bedrock: docs.aws.amazon.com/bedrock/.../model-card-anthropic-claude-opus-4-7.html
- *   - Google Vertex AI: docs.cloud.google.com/vertex-ai/.../claude/opus-4-7
- *   - Microsoft Foundry: ai.azure.com/catalog/models/claude-opus-4-7
+ * First-party is Opus 5. Bedrock, Vertex and Foundry deliberately stay on
+ * Opus 4.7: third-party capacity lags a launch, and official Claude Code's own
+ * catalogue is still split on this — its alias table routes Bedrock and Vertex
+ * to Opus 5 but pins Foundry to 4.6. Rather than model that per provider, this
+ * fork holds every 3P path at the last version all three published.
+ *
+ * The assertions read from ALL_MODEL_CONFIGS rather than string literals so a
+ * provider-ID correction cannot make this file quietly disagree with the
+ * registry. Change the key, not the string.
  */
 
 const envKeys = [
@@ -61,21 +63,21 @@ describe('getDefaultOpusModel', () => {
     resetProviderState()
   })
 
-  test('returns Opus 4.7 for firstParty', () => {
-    expect(getDefaultOpusModel()).toBe(ALL_MODEL_CONFIGS.opus47.firstParty)
+  test('returns Opus 5 for firstParty', () => {
+    expect(getDefaultOpusModel()).toBe(ALL_MODEL_CONFIGS.opus5.firstParty)
   })
 
-  test('returns Opus 4.7 for bedrock (3P no longer lags)', () => {
+  test('holds bedrock at Opus 4.7 while 3P capacity lags', () => {
     process.env.CLAUDE_CODE_USE_BEDROCK = '1'
     expect(getDefaultOpusModel()).toBe(ALL_MODEL_CONFIGS.opus47.bedrock)
   })
 
-  test('returns Opus 4.7 for vertex (3P no longer lags)', () => {
+  test('holds vertex at Opus 4.7 while 3P capacity lags', () => {
     process.env.CLAUDE_CODE_USE_VERTEX = '1'
     expect(getDefaultOpusModel()).toBe(ALL_MODEL_CONFIGS.opus47.vertex)
   })
 
-  test('returns Opus 4.7 for foundry (3P no longer lags)', () => {
+  test('holds foundry at Opus 4.7 while 3P capacity lags', () => {
     process.env.CLAUDE_CODE_USE_FOUNDRY = '1'
     expect(getDefaultOpusModel()).toBe(ALL_MODEL_CONFIGS.opus47.foundry)
   })

@@ -14,11 +14,21 @@ export function isBilledAsExtraUsage(
     .toLowerCase()
     .replace(/\[1m\]$/, '')
     .trim()
-  const isOpus46 =
-    m === 'opus' || m.includes('opus-4-6') || m.includes('opus-4-7')
-  const isSonnet46 = m === 'sonnet' || m.includes('sonnet-4-6')
+  // Matched on the resolved ID as well as the bare alias: the alias path keeps
+  // working across a model launch on its own, but a user who picked a specific
+  // model from the picker carries the full ID, and missing it here suppresses
+  // the extra-usage warning for exactly the case it exists to cover.
+  const isExtraUsageOpus =
+    m === 'opus' ||
+    m.includes('opus-4-6') ||
+    m.includes('opus-4-7') ||
+    m.includes('opus-4-8') ||
+    m.includes('opus-5')
+  const isExtraUsageSonnet =
+    m === 'sonnet' || m.includes('sonnet-4-6') || m.includes('sonnet-5')
+  const isExtraUsageFable = m === 'fable' || m.includes('fable-5')
 
-  if (isOpus46 && isOpus1mMerged) return false
+  if (isExtraUsageOpus && isOpus1mMerged) return false
 
-  return isOpus46 || isSonnet46
+  return isExtraUsageOpus || isExtraUsageSonnet || isExtraUsageFable
 }

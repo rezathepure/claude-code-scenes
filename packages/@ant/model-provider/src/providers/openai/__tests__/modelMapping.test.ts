@@ -65,4 +65,21 @@ describe('resolveOpenAIModel', () => {
   test('strips [1m] suffix', () => {
     expect(resolveOpenAIModel('claude-sonnet-4-6[1m]')).toBe('gpt-4o')
   })
+
+  test('maps the Claude 5 generation rather than passing it through', () => {
+    // Anything unmapped is handed to the OpenAI endpoint verbatim and 404s.
+    expect(resolveOpenAIModel('claude-opus-5')).toBe('o3')
+    expect(resolveOpenAIModel('claude-sonnet-5')).toBe('gpt-4o')
+    expect(resolveOpenAIModel('claude-fable-5')).toBe('o3')
+    expect(resolveOpenAIModel('claude-opus-4-8')).toBe('o3')
+    expect(resolveOpenAIModel('claude-opus-4-7')).toBe('o3')
+  })
+
+  test('routes fable through its own family env var, not opus', () => {
+    process.env.OPENAI_DEFAULT_FABLE_MODEL = 'o4-pro'
+    process.env.OPENAI_DEFAULT_OPUS_MODEL = 'o4-mini'
+    expect(resolveOpenAIModel('claude-fable-5')).toBe('o4-pro')
+    delete process.env.OPENAI_DEFAULT_FABLE_MODEL
+    delete process.env.OPENAI_DEFAULT_OPUS_MODEL
+  })
 })

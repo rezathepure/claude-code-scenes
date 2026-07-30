@@ -106,8 +106,16 @@ export function modelSupportsThinking(model: string): boolean {
   if (provider === 'foundry' || provider === 'firstParty') {
     return !canonical.includes('claude-3-')
   }
-  // 3P (Bedrock/Vertex): only Opus 4+ and Sonnet 4+
-  return canonical.includes('sonnet-4') || canonical.includes('opus-4')
+  // 3P (Bedrock/Vertex): only Opus 4+, Sonnet 4+ and the Claude 5 generation.
+  // The 5 IDs match neither 'sonnet-4' nor 'opus-4', so without them listed
+  // here thinking is silently off entirely for the current flagship models.
+  return (
+    canonical.includes('sonnet-4') ||
+    canonical.includes('opus-4') ||
+    canonical.includes('sonnet-5') ||
+    canonical.includes('opus-5') ||
+    canonical.includes('fable-5')
+  )
 }
 
 // @[MODEL LAUNCH]: Add the new model to the allowlist if it supports adaptive thinking.
@@ -117,8 +125,14 @@ export function modelSupportsAdaptiveThinking(model: string): boolean {
     return supported3P
   }
   const canonical = getCanonicalName(model)
-  // Supported by a subset of Claude 4 models
+  // The Claude 5 generation plus a subset of Claude 4 models. These must stay
+  // above the legacy exclusion below, which would otherwise deny every one of
+  // them for containing 'opus' or 'sonnet'.
   if (
+    canonical.includes('opus-5') ||
+    canonical.includes('sonnet-5') ||
+    canonical.includes('fable-5') ||
+    canonical.includes('opus-4-8') ||
     canonical.includes('opus-4-7') ||
     canonical.includes('opus-4-6') ||
     canonical.includes('sonnet-4-6')

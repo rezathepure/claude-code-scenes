@@ -51,9 +51,33 @@ export function modelSupports1M(model: string): boolean {
   }
   const canonical = getCanonicalName(model)
   return (
+    modelHasNative1M(canonical) ||
     canonical.includes('claude-sonnet-4') ||
     canonical.includes('opus-4-6') ||
-    canonical.includes('opus-4-7')
+    canonical.includes('opus-4-7') ||
+    canonical.includes('opus-4-8')
+  )
+}
+
+// @[MODEL LAUNCH]: Add the new model here if its context window is 1M without
+// the [1m] opt-in.
+/**
+ * Models whose context window is 1M by default, not by request.
+ *
+ * The Claude 5 generation ships at 1M natively. Without this, a user on plain
+ * `sonnet` would be budgeted at 200K on a 1M model: the context meter reads
+ * five times too high and autocompact fires around 180K for no reason. The
+ * `/v1/models` capability cache eventually corrects this on first-party, but
+ * not on the first run and never on Bedrock/Vertex/Foundry.
+ *
+ * This is additive. The `[1m]` suffix and the context-1m beta header stay
+ * exactly as they were — official still sends the header for these models.
+ */
+function modelHasNative1M(canonical: string): boolean {
+  return (
+    canonical.includes('opus-5') ||
+    canonical.includes('sonnet-5') ||
+    canonical.includes('fable-5')
   )
 }
 
@@ -116,6 +140,12 @@ export function getContextWindowForModel(
     if (antModel?.contextWindow) {
       return antModel.contextWindow
     }
+  }
+  // Natively-1M models. Checked last so every explicit signal above still wins:
+  // the ant cap, the /v1/models capability cache, and the ChatGPT window all
+  // describe a specific deployment, while this is only the model's default.
+  if (!is1mContextDisabled() && modelHasNative1M(getCanonicalName(model))) {
+    return 1_000_000
   }
   return MODEL_CONTEXT_WINDOW_DEFAULT
 }
@@ -197,8 +227,16 @@ export function getModelMaxOutputTokens(model: string): {
   if (getChatGPTModelContextWindow(model) !== undefined) {
     defaultTokens = 32_000
     upperLimit = CHATGPT_CODEX_MAX_OUTPUT_TOKENS
-  } else if (m.includes('opus-4-7')) {
+  } else if (
+    m.includes('opus-5') ||
+    m.includes('fable-5') ||
+    m.includes('opus-4-8') ||
+    m.includes('opus-4-7')
+  ) {
     defaultTokens = 64_000
+    upperLimit = 128_000
+  } else if (m.includes('sonnet-5')) {
+    defaultTokens = 32_000
     upperLimit = 128_000
   } else if (m.includes('opus-4-6')) {
     defaultTokens = 64_000

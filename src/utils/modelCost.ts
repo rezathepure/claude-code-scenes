@@ -7,15 +7,19 @@ import {
   CLAUDE_3_5_HAIKU_CONFIG,
   CLAUDE_3_5_V2_SONNET_CONFIG,
   CLAUDE_3_7_SONNET_CONFIG,
+  CLAUDE_FABLE_5_CONFIG,
   CLAUDE_HAIKU_4_5_CONFIG,
   CLAUDE_OPUS_4_1_CONFIG,
   CLAUDE_OPUS_4_5_CONFIG,
   CLAUDE_OPUS_4_6_CONFIG,
   CLAUDE_OPUS_4_7_CONFIG,
+  CLAUDE_OPUS_4_8_CONFIG,
   CLAUDE_OPUS_4_CONFIG,
+  CLAUDE_OPUS_5_CONFIG,
   CLAUDE_SONNET_4_5_CONFIG,
   CLAUDE_SONNET_4_6_CONFIG,
   CLAUDE_SONNET_4_CONFIG,
+  CLAUDE_SONNET_5_CONFIG,
 } from './model/configs.js'
 import {
   firstPartyNameToCanonical,
@@ -66,6 +70,15 @@ export const COST_TIER_30_150 = {
   outputTokens: 150,
   promptCacheWriteTokens: 37.5,
   promptCacheReadTokens: 3,
+  webSearchRequests: 0.01,
+} as const satisfies ModelCosts
+
+// Pricing tier for Fable 5: $10 input / $50 output per Mtok
+export const COST_TIER_10_50 = {
+  inputTokens: 10,
+  outputTokens: 50,
+  promptCacheWriteTokens: 12.5,
+  promptCacheReadTokens: 1,
   webSearchRequests: 0.01,
 } as const satisfies ModelCosts
 
@@ -126,6 +139,17 @@ export const MODEL_COSTS: Record<ModelShortName, ModelCosts> = {
     COST_TIER_5_25,
   [firstPartyNameToCanonical(CLAUDE_OPUS_4_7_CONFIG.firstParty)]:
     COST_TIER_5_25,
+  [firstPartyNameToCanonical(CLAUDE_OPUS_4_8_CONFIG.firstParty)]:
+    COST_TIER_5_25,
+  [firstPartyNameToCanonical(CLAUDE_OPUS_5_CONFIG.firstParty)]: COST_TIER_5_25,
+  // Sonnet 5 is priced at the standard 3/15 tier. The $2/$10 introductory rate
+  // running to 2026-08-31 is deliberately not modelled — official Claude Code
+  // quotes tier_3_15 for it too, and a tier that silently expires would be
+  // worse than one that is consistently a little pessimistic.
+  [firstPartyNameToCanonical(CLAUDE_SONNET_5_CONFIG.firstParty)]:
+    COST_TIER_3_15,
+  [firstPartyNameToCanonical(CLAUDE_FABLE_5_CONFIG.firstParty)]:
+    COST_TIER_10_50,
 }
 
 /**

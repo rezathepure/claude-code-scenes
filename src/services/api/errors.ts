@@ -943,6 +943,19 @@ function get3PModelFallbackSuggestion(model: string): string | undefined {
   }
   // @[MODEL LAUNCH]: Add a fallback suggestion chain for the new model → previous version for 3P
   const m = model.toLowerCase()
+  // Fable first — official's catalogue records claude-opus-5 as its 3P fallback.
+  if (m.includes('fable-5') || m.includes('fable_5')) {
+    return getModelStrings().opus5
+  }
+  if (m.includes('opus-5') || m.includes('opus_5')) {
+    return getModelStrings().opus47
+  }
+  if (m.includes('sonnet-5') || m.includes('sonnet_5')) {
+    return getModelStrings().sonnet46
+  }
+  if (m.includes('opus-4-8') || m.includes('opus_4_8')) {
+    return getModelStrings().opus47
+  }
   // If the failing model looks like an Opus 4.6 variant, suggest the default Opus (4.1 for 3P)
   if (m.includes('opus-4-7') || m.includes('opus_4_7')) {
     return getModelStrings().opus46

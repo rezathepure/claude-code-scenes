@@ -56,6 +56,12 @@ mock.module('src/utils/envUtils.js', () => ({
 mock.module('src/utils/model/model.js', () => ({
   getCanonicalName: (id: string) => id,
   getMarketingNameForModel: (id: string) => {
+    // Order matters exactly as in the real implementation: 'claude-opus-4-8'
+    // contains 'opus-4', so the specific arms must precede the general ones.
+    if (id.includes('opus-5')) return 'Claude Opus 5'
+    if (id.includes('sonnet-5')) return 'Claude Sonnet 5'
+    if (id.includes('fable-5')) return 'Claude Fable 5'
+    if (id.includes('opus-4-8')) return 'Claude Opus 4.8'
     if (id.includes('opus-4-7')) return 'Claude Opus 4.7'
     if (id.includes('opus-4-6')) return 'Claude Opus 4.6'
     if (id.includes('sonnet-4-6')) return 'Claude Sonnet 4.6'
@@ -232,7 +238,7 @@ async function getFullPrompt(
 // 对应审计文档 第一部分 #1-#10
 // =====================================================================
 
-describe('Opus 4.7 Prompt Engineering Audit', () => {
+describe('Prompt Engineering Audit', () => {
   // ------------------------------------------------------------------
   // #1 决策树结构 (Decision Tree)
   // TXT 来源: {request_evaluation_checklist} — Step 0→1→2→3
@@ -586,14 +592,15 @@ describe('Opus 4.7 Prompt Engineering Audit', () => {
     })
 
     test('env info contains model family', async () => {
-      const envInfo = await computeSimpleEnvInfo('claude-opus-4-7')
-      expect(envInfo).toContain('Claude 4.5/4.6/4.7')
+      const envInfo = await computeSimpleEnvInfo('claude-opus-5')
+      expect(envInfo).toContain('Claude 5 family')
     })
 
     test('env info contains correct model IDs', async () => {
-      const envInfo = await computeSimpleEnvInfo('claude-opus-4-7')
-      expect(envInfo).toContain('claude-opus-4-7')
-      expect(envInfo).toContain('claude-sonnet-4-6')
+      const envInfo = await computeSimpleEnvInfo('claude-opus-5')
+      expect(envInfo).toContain('claude-opus-5')
+      expect(envInfo).toContain('claude-sonnet-5')
+      expect(envInfo).toContain('claude-fable-5')
       expect(envInfo).toContain('claude-haiku-4-5')
     })
 
@@ -706,6 +713,30 @@ describe('Opus 4.7 Prompt Engineering Audit', () => {
   // =====================================================================
 
   describe('Knowledge cutoff correctness', () => {
+    test('Opus 5 cutoff is May 2026', async () => {
+      const envInfo = await computeSimpleEnvInfo('claude-opus-5')
+      expect(envInfo).toContain('May 2026')
+    })
+
+    test('Sonnet 5 cutoff is January 2026', async () => {
+      const envInfo = await computeSimpleEnvInfo('claude-sonnet-5')
+      expect(envInfo).toContain('January 2026')
+    })
+
+    test('Fable 5 cutoff is January 2026', async () => {
+      const envInfo = await computeSimpleEnvInfo('claude-fable-5')
+      expect(envInfo).toContain('January 2026')
+    })
+
+    test('Opus 4.8 does not inherit the Opus 4 cutoff', async () => {
+      // 'claude-opus-4-8' satisfies .includes('claude-opus-4'), so without its
+      // own arm in getKnowledgeCutoff it is dated January 2025 — eighteen
+      // months early, and silently.
+      const envInfo = await computeSimpleEnvInfo('claude-opus-4-8')
+      expect(envInfo).toContain('January 2026')
+      expect(envInfo).not.toContain('January 2025')
+    })
+
     test('Opus 4.7 cutoff is January 2026', async () => {
       const envInfo = await computeSimpleEnvInfo('claude-opus-4-7')
       expect(envInfo).toContain('January 2026')
@@ -721,9 +752,9 @@ describe('Opus 4.7 Prompt Engineering Audit', () => {
       expect(envInfo).toContain('August 2025')
     })
 
-    test('Opus 4.7 frontier model name is correct', async () => {
-      const envInfo = await computeSimpleEnvInfo('claude-opus-4-7')
-      expect(envInfo).toContain('Claude Opus 4.7')
+    test('frontier model name is correct', async () => {
+      const envInfo = await computeSimpleEnvInfo('claude-opus-5')
+      expect(envInfo).toContain('Claude Opus 5')
     })
   })
 })

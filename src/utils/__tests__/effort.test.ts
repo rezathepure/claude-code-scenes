@@ -312,6 +312,47 @@ describe('resolvePickerEffortPersistence', () => {
   })
 })
 
+// ─── modelSupportsEffort ───────────────────────────────────────────────
+
+describe('modelSupportsEffort', () => {
+  // This function was entirely untested, and its shape is a trap: an allowlist
+  // of specific versions followed by a blanket exclusion of anything
+  // containing 'opus', 'sonnet' or 'haiku'. Any new model added below the
+  // exclusion instead of above it silently loses the effort parameter.
+  test('supports the Claude 5 generation', async () => {
+    const { modelSupportsEffort } = await import('src/utils/effort.js')
+    expect(modelSupportsEffort('claude-opus-5')).toBe(true)
+    expect(modelSupportsEffort('claude-sonnet-5')).toBe(true)
+    expect(modelSupportsEffort('claude-fable-5')).toBe(true)
+  })
+
+  test('supports opus 4.6 through 4.8 and sonnet 4.6', async () => {
+    const { modelSupportsEffort } = await import('src/utils/effort.js')
+    expect(modelSupportsEffort('claude-opus-4-8')).toBe(true)
+    expect(modelSupportsEffort('claude-opus-4-7')).toBe(true)
+    expect(modelSupportsEffort('claude-opus-4-6')).toBe(true)
+    expect(modelSupportsEffort('claude-sonnet-4-6')).toBe(true)
+  })
+
+  test('does not support Haiku 4.5', async () => {
+    // Official's catalogue gives Haiku 4.5 no effort capability at all, and the
+    // picker relies on this to print "Effort not supported".
+    const { modelSupportsEffort } = await import('src/utils/effort.js')
+    expect(modelSupportsEffort('claude-haiku-4-5-20251001')).toBe(false)
+  })
+
+  test('does not support superseded opus/sonnet versions', async () => {
+    const { modelSupportsEffort } = await import('src/utils/effort.js')
+    expect(modelSupportsEffort('claude-opus-4-5-20251101')).toBe(false)
+    expect(modelSupportsEffort('claude-sonnet-4-5-20250929')).toBe(false)
+  })
+
+  test('carries through the [1m] suffix', async () => {
+    const { modelSupportsEffort } = await import('src/utils/effort.js')
+    expect(modelSupportsEffort('claude-opus-5[1m]')).toBe(true)
+  })
+})
+
 // ─── modelSupportsMaxEffort ────────────────────────────────────────────
 
 describe('modelSupportsMaxEffort', () => {

@@ -30,18 +30,23 @@ import typescriptClaudeApiToolUse from './claude-api/typescript/claude-api/tool-
 
 // @[MODEL LAUNCH]: Update the model IDs/names below. These are substituted into {{VAR}}
 // placeholders in the .md files at runtime before the skill prompt is sent.
-// After updating these constants, manually update the two files that still hardcode models:
-//   - claude-api/SKILL.md (Current Models pricing table)
-//   - claude-api/shared/models.md (full model catalog with legacy versions and alias mappings)
+//
+// Upstream's note here also asks you to hand-edit claude-api/SKILL.md and
+// claude-api/shared/models.md, which hardcode a pricing table and a full model
+// catalog. Those .md sources are not vendored into this fork — the ./claude-api
+// directory does not exist — so there is nothing to edit alongside these
+// constants. Restore the note if the content is ever brought back.
 export const SKILL_MODEL_VARS = {
-  OPUS_ID: 'claude-opus-4-7',
-  OPUS_NAME: 'Claude Opus 4.7',
-  SONNET_ID: 'claude-sonnet-4-6',
-  SONNET_NAME: 'Claude Sonnet 4.6',
+  OPUS_ID: 'claude-opus-5',
+  OPUS_NAME: 'Claude Opus 5',
+  SONNET_ID: 'claude-sonnet-5',
+  SONNET_NAME: 'Claude Sonnet 5',
   HAIKU_ID: 'claude-haiku-4-5',
   HAIKU_NAME: 'Claude Haiku 4.5',
+  FABLE_ID: 'claude-fable-5',
+  FABLE_NAME: 'Claude Fable 5',
   // Previous Sonnet ID — used in "do not append date suffixes" example in SKILL.md.
-  PREV_SONNET_ID: 'claude-sonnet-4-5',
+  PREV_SONNET_ID: 'claude-sonnet-4-6',
 } satisfies Record<string, string>
 
 export const SKILL_PROMPT: string = skillPrompt

@@ -116,6 +116,8 @@ function aliasMatchesParentTier(alias: string, parentModel: string): boolean {
       return canonical.includes('sonnet')
     case 'haiku':
       return canonical.includes('haiku')
+    case 'fable':
+      return canonical.includes('fable')
     default:
       return false
   }
@@ -147,6 +149,11 @@ export function getAgentModelOptions(): AgentModelOption[] {
       value: 'haiku',
       label: 'Haiku',
       description: 'Fast and efficient for simple tasks',
+    },
+    {
+      value: 'fable',
+      label: 'Fable',
+      description: 'Most capable for the hardest, longest-running tasks',
     },
     {
       value: 'inherit',
