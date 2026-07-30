@@ -219,6 +219,24 @@ export function getEffortSuffix(
   return ` with ${convertEffortValueToLevel(resolved)} effort`
 }
 
+/**
+ * Title-case an effort level for display.
+ *
+ * 'xhigh' is the reason this exists: lodash `capitalize` lowercases the tail
+ * and renders it "Xhigh", which reads as a typo. Official Claude Code special-
+ * cases the same value.
+ *
+ * Accepts undefined and returns '' for it, matching the lodash call this
+ * replaced — the picker renders the indicator glyph even before an effort
+ * level has been resolved.
+ */
+export function formatEffortLevel(level: EffortLevel | undefined): string {
+  if (level === undefined) return ''
+  return level === 'xhigh'
+    ? 'xHigh'
+    : level.charAt(0).toUpperCase() + level.slice(1)
+}
+
 export function isValidNumericEffort(value: number): boolean {
   return Number.isInteger(value)
 }

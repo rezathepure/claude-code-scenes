@@ -1,4 +1,3 @@
-import capitalize from 'lodash-es/capitalize.js';
 import * as React from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { has1mContext } from '../utils/context.js';
@@ -19,6 +18,7 @@ import { useAppState, useSetAppState } from '../state/AppState.js';
 import {
   convertEffortValueToLevel,
   type EffortLevel,
+  formatEffortLevel,
   getDefaultEffortForModel,
   modelSupportsEffort,
   modelSupportsMaxEffort,
@@ -272,7 +272,7 @@ export function ModelPicker({
         <Box marginBottom={1} flexDirection="column">
           {focusedSupportsEffort ? (
             <Text dimColor>
-              <EffortLevelIndicator effort={displayEffort} /> {capitalize(displayEffort)} effort
+              <EffortLevelIndicator effort={displayEffort} /> {formatEffortLevel(displayEffort)} effort
               {displayEffort === focusedDefaultEffort ? ` (default)` : ``} <Text color="subtle">← → to adjust</Text>
             </Text>
           ) : (

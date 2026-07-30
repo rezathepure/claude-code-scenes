@@ -25,6 +25,7 @@ const {
   parseEffortValue,
   isValidNumericEffort,
   convertEffortValueToLevel,
+  formatEffortLevel,
   getEffortLevelDescription,
   resolvePickerEffortPersistence,
   EFFORT_LEVELS,
@@ -35,6 +36,26 @@ const {
 describe('EFFORT_LEVELS', () => {
   test('contains the five canonical levels', () => {
     expect(EFFORT_LEVELS).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
+  })
+})
+
+// ─── formatEffortLevel ─────────────────────────────────────────────────
+
+describe('formatEffortLevel', () => {
+  test("renders 'xhigh' as xHigh, not Xhigh", () => {
+    // The whole reason this helper exists. lodash `capitalize` lowercases the
+    // tail, which turned the picker's effort line into "Xhigh effort".
+    expect(formatEffortLevel('xhigh')).toBe('xHigh')
+  })
+
+  test('title-cases every other level', () => {
+    expect(
+      EFFORT_LEVELS.filter(l => l !== 'xhigh').map(formatEffortLevel),
+    ).toEqual(['Low', 'Medium', 'High', 'Max'])
+  })
+
+  test('returns empty string for undefined, as the lodash call it replaced did', () => {
+    expect(formatEffortLevel(undefined)).toBe('')
   })
 })
 
