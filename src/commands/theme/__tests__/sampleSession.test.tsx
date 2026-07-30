@@ -113,7 +113,11 @@ describe('SAMPLE_LINES', () => {
   });
 });
 
-describe('SampleSession', () => {
+// Only the rendering half is skipped on CI — the fitting and slot-coverage
+// tests above are pure and must keep running there. See previewIdentity.test
+// for why Ink cannot render inside the shared test process on Linux: a global
+// `mock.module('@anthropic/ink')` in another file swaps Text for a string.
+describe.skipIf(!!process.env.CI)('SampleSession', () => {
   test('renders the whole script, teaching copy included', async () => {
     const out = await renderToString(harness(<SampleSession width={74} rows={FULL_ROWS} skipHighlighting />), 78);
 

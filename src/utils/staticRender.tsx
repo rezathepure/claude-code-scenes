@@ -27,6 +27,16 @@ function RenderOnceAndExit({ children }: { children: React.ReactNode }): React.R
   return <>{children}</>;
 }
 
+/**
+ * How long to wait for Ink to unmount before taking the frame and moving on.
+ *
+ * Comfortably longer than a real render (single-digit milliseconds) and
+ * comfortably shorter than bun test's 5s per-test timeout, so a tree that
+ * cannot exit produces a readable assertion failure rather than a timeout with
+ * nothing to go on.
+ */
+const EXIT_DEADLINE_MS = 2000;
+
 // DEC synchronized update markers used by terminals
 const SYNC_START = '\x1B[?2026h';
 const SYNC_END = '\x1B[?2026l';
@@ -72,8 +82,32 @@ export async function renderToAnsiString(node: React.ReactNode, columns?: number
     patchConsole: false,
   });
 
-  // Wait for the component to exit naturally
-  await instance.waitUntilExit();
+  // Wait for the component to exit naturally — but never forever.
+  //
+  // The frame is already on the stream by the time React commits; the only
+  // thing that can hang here is the exit. Anything the tree mounts that holds
+  // the event loop — a stdin listener from useInput, an interval, a component
+  // that never settles — leaves waitUntilExit unresolved, and the caller waits
+  // with a complete frame sitting in `output`. That is how a rendered
+  // component turns into a frozen `/context`, and how these helpers turned
+  // into 5-second test timeouts on CI while passing locally.
+  //
+  // Capping it costs nothing when exit works (the race resolves immediately)
+  // and turns the failure into something legible everywhere else: whatever was
+  // rendered, returned, plus an unmount so the process can still exit.
+  let exited = false;
+  await Promise.race([
+    instance.waitUntilExit().then(() => {
+      exited = true;
+    }),
+    new Promise<void>(resolve => setTimeout(resolve, EXIT_DEADLINE_MS)),
+  ]);
+  if (!exited) {
+    instance.unmount();
+  }
+  // Ink caches instances by stdout stream, and every call here passes a fresh
+  // PassThrough — without this the map grows one dead entry per render.
+  instance.cleanup();
 
   // Extract only the first frame's content to avoid duplication
   // (Ink outputs multiple frames in non-TTY mode)
