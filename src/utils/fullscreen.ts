@@ -3,6 +3,7 @@ import { getIsInteractive } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils.js'
 import { execFileNoThrow } from './execFileNoThrow.js'
+import { isTuiModeEnabled } from './tuiMode.js'
 
 let loggedTmuxCcDisable = false
 let checkedTmuxMouseHint = false
@@ -105,9 +106,19 @@ export function _resetTmuxControlModeProbeForTesting(): void {
 }
 
 /**
- * Runtime env-var check only. Ants default to on (CLAUDE_CODE_NO_FLICKER=0
- * to opt out); external users default to off (CLAUDE_CODE_NO_FLICKER=1 to
- * opt in).
+ * Whether alt-screen rendering is wanted, in precedence order:
+ *
+ *   CLAUDE_CODE_NO_FLICKER=0   off   (explicit opt-out always wins)
+ *   CLAUDE_CODE_NO_FLICKER=1   on
+ *   tmux -CC detected          off   (alt-screen corrupts it — see below)
+ *   `/tui off` recorded        off
+ *   otherwise                  ON
+ *
+ * The final default is where this fork parts company with upstream, which
+ * enables alt-screen for Anthropic-internal users only. Scenes — the animated
+ * theme backdrops this fork exists for — can only paint in alt-screen, so
+ * that default rendered every animated theme as a still palette on a fresh
+ * install. `/tui off` is the discoverable way back; see src/utils/tuiMode.ts.
  */
 export function isFullscreenEnvEnabled(): boolean {
   // Explicit user opt-out always wins.
@@ -125,7 +136,7 @@ export function isFullscreenEnvEnabled(): boolean {
     }
     return false
   }
-  return process.env.USER_TYPE === 'ant'
+  return isTuiModeEnabled()
 }
 
 /**

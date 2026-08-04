@@ -130,7 +130,10 @@ export function ThemePicker({
     const label = sceneLabelOf(scene);
     if (label === null) return null;
     if (!isFullscreenActive()) {
-      return `This theme has an animated background (${label}) — run with CLAUDE_CODE_NO_FLICKER=1 to see it (fullscreen mode)`;
+      // Alt-screen is on by default now, so reaching here means it was turned
+      // off deliberately — point at the switch that turns it back on rather
+      // than at the env var, which is the escape hatch and not the setting.
+      return `This theme has an animated background (${label}) — run /tui on and restart to see it (fullscreen mode)`;
     }
     if (getGlobalConfig().sceneAnimationsEnabled === false) {
       return `This theme has an animated background (${label}) — enable "Theme animations" in /config to see it`;

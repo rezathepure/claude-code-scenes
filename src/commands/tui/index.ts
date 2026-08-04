@@ -1,37 +1,13 @@
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
-import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import {
+  getTuiMarkerPath,
+  getTuiPreference,
+  isTuiModeEnabled,
+  setTuiPreference,
+} from '../../utils/tuiMode.js'
 import type { Command, LocalCommandResult } from '../../types/command.js'
 
-/**
- * Path to the TUI-mode marker file.
- *
- * When this file exists, the user has opted in to flicker-free TUI mode
- * (alternate screen buffer via CLAUDE_CODE_NO_FLICKER=1). The marker is
- * session-independent: it persists across restarts so the user only needs to
- * run `/tui on` once.
- *
- * Shell-profile integration: add the following to ~/.bashrc / ~/.zshrc to
- * auto-enable TUI mode when the marker is present:
- *
- *   [ -f "$HOME/.claude/.tui-mode" ] && export CLAUDE_CODE_NO_FLICKER=1
- *
- * Note: setting CLAUDE_CODE_NO_FLICKER at runtime cannot retroactively enter
- * the alternate screen buffer — the Ink render tree is already mounted. The
- * change takes effect on the NEXT session start.
- */
-export function getTuiMarkerPath(): string {
-  return join(getClaudeConfigHomeDir(), '.tui-mode')
-}
-
-/**
- * Returns true when the TUI-mode marker file is present, meaning the user has
- * opted in to flicker-free alternate-screen rendering.
- */
-export function isTuiModeEnabled(): boolean {
-  return existsSync(getTuiMarkerPath())
-}
+export { getTuiMarkerPath, isTuiModeEnabled }
 
 const USAGE_TEXT = [
   'Usage: /tui [subcommand]',
@@ -43,32 +19,29 @@ const USAGE_TEXT = [
   '',
   'TUI mode uses the ANSI alternate screen buffer (\\x1b[?1049h) so the',
   'Claude Code UI occupies a clean full-screen area with no scroll-back',
-  'flicker.  The setting is stored in ~/.claude/.tui-mode and takes effect',
-  'on the next session start.',
-  '',
-  'Shell-profile integration (auto-enable on every start):',
-  '  [ -f "$HOME/.claude/.tui-mode" ] && export CLAUDE_CODE_NO_FLICKER=1',
+  'flicker.  It is ON by default, and it is what animated themes need in',
+  'order to paint — see `/theme`.  The setting is stored in',
+  '~/.claude/.tui-mode and takes effect on the next session start.',
   '',
   'Environment override:',
-  '  CLAUDE_CODE_NO_FLICKER=1   force on (overrides marker)',
-  '  CLAUDE_CODE_NO_FLICKER=0   force off (overrides marker)',
+  '  CLAUDE_CODE_NO_FLICKER=1   force on (overrides the stored setting)',
+  '  CLAUDE_CODE_NO_FLICKER=0   force off (overrides the stored setting)',
 ].join('\n')
 
+/** Shared tail: the setting cannot apply to the session already rendering. */
+const RESTART_NOTE = 'Takes effect on the next session start.'
+
 function enableTui(): LocalCommandResult {
-  const markerPath = getTuiMarkerPath()
-  mkdirSync(getClaudeConfigHomeDir(), { recursive: true })
-  writeFileSync(markerPath, new Date().toISOString(), 'utf8')
+  setTuiPreference('on')
   return {
     type: 'text',
     value: [
       '## TUI mode enabled',
       '',
-      `Marker written: \`${markerPath}\``,
+      'Flicker-free alternate-screen rendering, and the backdrop for animated',
+      'themes.',
       '',
-      'Flicker-free alternate-screen rendering will be active on the next',
-      'session start.  Add this to your shell profile to make it permanent:',
-      '',
-      '  [ -f "$HOME/.claude/.tui-mode" ] && export CLAUDE_CODE_NO_FLICKER=1',
+      RESTART_NOTE,
       '',
       'To disable: `/tui off`',
     ].join('\n'),
@@ -76,23 +49,16 @@ function enableTui(): LocalCommandResult {
 }
 
 function disableTui(): LocalCommandResult {
-  const markerPath = getTuiMarkerPath()
-  if (!existsSync(markerPath)) {
-    return {
-      type: 'text',
-      value: 'TUI mode was not active.',
-    }
-  }
-  unlinkSync(markerPath)
+  setTuiPreference('off')
   return {
     type: 'text',
     value: [
       '## TUI mode disabled',
       '',
-      `Marker removed: \`${markerPath}\``,
+      'Standard (non-alternate-screen) rendering will be used. Animated theme',
+      'backdrops cannot paint in this mode — themes still apply their colours.',
       '',
-      'Standard (non-alternate-screen) rendering will be used on the next',
-      'session start.',
+      RESTART_NOTE,
       '',
       'To re-enable: `/tui on`',
     ].join('\n'),
@@ -104,8 +70,7 @@ export async function callTui(args: string): Promise<LocalCommandResult> {
 
   // ── status ──────────────────────────────────────────────────────────
   if (sub === 'status') {
-    const enabled = isTuiModeEnabled()
-    const markerPath = getTuiMarkerPath()
+    const preference = getTuiPreference()
     const envVal = process.env.CLAUDE_CODE_NO_FLICKER
     let envLine: string
     if (envVal === '1' || envVal === 'true') {
@@ -115,16 +80,20 @@ export async function callTui(args: string): Promise<LocalCommandResult> {
     } else {
       envLine = 'CLAUDE_CODE_NO_FLICKER not set'
     }
+    const storedLine =
+      preference === 'unset'
+        ? 'not set — defaults to enabled'
+        : `${preference} (\`${getTuiMarkerPath()}\`)`
     return {
       type: 'text',
       value: [
         '## TUI Mode Status',
         '',
-        `  Marker file:  ${enabled ? 'present' : 'absent'} (\`${markerPath}\`)`,
-        `  Mode:         ${enabled ? 'enabled' : 'disabled'}`,
-        `  Env var:      ${envLine}`,
+        `  Stored setting:  ${storedLine}`,
+        `  Env var:         ${envLine}`,
+        `  Effective:       ${isTuiModeEnabled() ? 'enabled' : 'disabled'}`,
         '',
-        'Note: changes take effect on the next session start.',
+        `Note: ${RESTART_NOTE.toLowerCase()}`,
       ].join('\n'),
     }
   }

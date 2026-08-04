@@ -9,6 +9,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getClaudeConfigHomeDir } from '../../../utils/envUtils.js'
+import { _resetTuiPreferenceForTesting } from '../../../utils/tuiMode.js'
 
 mock.module('bun:bundle', () => ({
   feature: (_name: string) => true,
@@ -32,6 +33,10 @@ beforeEach(() => {
   // suite's CLAUDE_CONFIG_DIR overrides any value cached by an earlier
   // test file in the same process.
   getClaudeConfigHomeDir.cache?.clear?.()
+  // The preference is read once and cached for the session, so a fresh temp
+  // config dir is not enough on its own — without this every test after the
+  // first would see the previous one's answer.
+  _resetTuiPreferenceForTesting()
   // Save env vars we may mutate
   origEnv.CLAUDE_CODE_NO_FLICKER = process.env.CLAUDE_CODE_NO_FLICKER
   delete process.env.CLAUDE_CODE_NO_FLICKER
@@ -118,83 +123,84 @@ describe('tui command metadata', () => {
 })
 
 describe('tui status subcommand', () => {
-  test('reports disabled when no marker file', async () => {
+  test('reports enabled by default when nothing has been chosen', async () => {
     const result = await invokeCmd('status')
     expect(result.type).toBe('text')
-    expect(result.value).toContain('disabled')
+    expect(result.value).toContain('defaults to enabled')
+    expect(result.value).toContain('Effective:       enabled')
   })
 
-  test('reports enabled when marker file exists', async () => {
-    const { getTuiMarkerPath } = await import('../index.js')
-    const markerPath = getTuiMarkerPath()
-    // Write the marker
-    const { writeFileSync } = await import('node:fs')
-    writeFileSync(markerPath, '1', 'utf8')
+  test('reports disabled once off has been recorded', async () => {
+    await invokeCmd('off')
+    _resetTuiPreferenceForTesting()
 
     const result = await invokeCmd('status')
     expect(result.type).toBe('text')
-    expect(result.value).toContain('enabled')
+    expect(result.value).toContain('Effective:       disabled')
   })
 })
 
 describe('tui on subcommand', () => {
-  test('writes marker file', async () => {
+  test('records the on preference', async () => {
     const { getTuiMarkerPath } = await import('../index.js')
     const markerPath = getTuiMarkerPath()
-    expect(existsSync(markerPath)).toBe(false)
 
     const result = await invokeCmd('on')
     expect(result.type).toBe('text')
     expect(result.value).toContain('enabled')
     expect(existsSync(markerPath)).toBe(true)
+    expect(readFileSync(markerPath, 'utf8').trim()).not.toBe('off')
   })
 
-  test('idempotent: on when already on reports already enabled', async () => {
+  test('on after off flips back', async () => {
+    await invokeCmd('off')
     await invokeCmd('on')
-    const result = await invokeCmd('on')
-    expect(result.type).toBe('text')
-    // Second call still returns a success message
-    expect(result.value).toContain('enabled')
+
+    const { isTuiModeEnabled } = await import('../index.js')
+    expect(isTuiModeEnabled()).toBe(true)
   })
 })
 
 describe('tui off subcommand', () => {
-  test('removes marker file', async () => {
+  test('records an explicit off rather than deleting the marker', async () => {
     const { getTuiMarkerPath } = await import('../index.js')
-    await invokeCmd('on')
-    expect(existsSync(getTuiMarkerPath())).toBe(true)
 
     const result = await invokeCmd('off')
     expect(result.type).toBe('text')
     expect(result.value).toContain('disabled')
-    expect(existsSync(getTuiMarkerPath())).toBe(false)
+    // The distinction the tri-state exists for: "off" has to survive as a
+    // recorded choice, because absence now means "on".
+    expect(existsSync(getTuiMarkerPath())).toBe(true)
+    expect(readFileSync(getTuiMarkerPath(), 'utf8').trim()).toBe('off')
   })
 
-  test('off when already off returns graceful message', async () => {
+  test('off is idempotent', async () => {
+    await invokeCmd('off')
     const result = await invokeCmd('off')
-    expect(result.type).toBe('text')
-    expect(result.value).toContain('not active')
+    expect(result.value).toContain('disabled')
+
+    const { isTuiModeEnabled } = await import('../index.js')
+    expect(isTuiModeEnabled()).toBe(false)
   })
 })
 
 describe('tui toggle subcommand', () => {
-  test('toggle with no marker enables tui', async () => {
-    const { getTuiMarkerPath } = await import('../index.js')
-    const result = await invokeCmd('')
-    expect(result.type).toBe('text')
-    expect(result.value).toContain('enabled')
-    expect(existsSync(getTuiMarkerPath())).toBe(true)
-  })
-
-  test('toggle with marker disables tui', async () => {
-    const { getTuiMarkerPath } = await import('../index.js')
-    await invokeCmd('')
-    expect(existsSync(getTuiMarkerPath())).toBe(true)
-
+  test('first toggle disables, because the default is on', async () => {
     const result = await invokeCmd('')
     expect(result.type).toBe('text')
     expect(result.value).toContain('disabled')
-    expect(existsSync(getTuiMarkerPath())).toBe(false)
+
+    const { isTuiModeEnabled } = await import('../index.js')
+    expect(isTuiModeEnabled()).toBe(false)
+  })
+
+  test('toggling twice returns to enabled', async () => {
+    await invokeCmd('')
+    const result = await invokeCmd('')
+    expect(result.value).toContain('enabled')
+
+    const { isTuiModeEnabled } = await import('../index.js')
+    expect(isTuiModeEnabled()).toBe(true)
   })
 })
 
@@ -232,15 +238,26 @@ describe('tui status env var display', () => {
 })
 
 describe('isTuiModeEnabled', () => {
-  test('returns false when marker absent', async () => {
+  test('defaults to true when nothing has been chosen', async () => {
     const { isTuiModeEnabled } = await import('../index.js')
+    expect(isTuiModeEnabled()).toBe(true)
+  })
+
+  test('is false only for an explicit off', async () => {
+    const { isTuiModeEnabled, getTuiMarkerPath } = await import('../index.js')
+    const { writeFileSync } = await import('node:fs')
+    writeFileSync(getTuiMarkerPath(), 'off', 'utf8')
+    _resetTuiPreferenceForTesting()
     expect(isTuiModeEnabled()).toBe(false)
   })
 
-  test('returns true when marker present', async () => {
+  test('a legacy timestamp marker still reads as on', async () => {
+    // `/tui on` used to write an ISO timestamp and "file exists" meant
+    // enabled. Upgrading must not flip those users off.
     const { isTuiModeEnabled, getTuiMarkerPath } = await import('../index.js')
     const { writeFileSync } = await import('node:fs')
-    writeFileSync(getTuiMarkerPath(), '1', 'utf8')
+    writeFileSync(getTuiMarkerPath(), '2026-01-01T00:00:00.000Z', 'utf8')
+    _resetTuiPreferenceForTesting()
     expect(isTuiModeEnabled()).toBe(true)
   })
 })
