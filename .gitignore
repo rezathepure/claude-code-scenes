@@ -56,3 +56,10 @@ credentials.json
 .test-progress.md
 .squash-tmp/
 .git.*-backup
+
+# Scene capture intermediates — the .svg deliverables are committed, the
+# frame JSON they are built from is regenerable with `bun run capture:scenes`.
+assets/scenes/*.json
+
+# GitHub Pages build output (bun run site:build)
+_site/
