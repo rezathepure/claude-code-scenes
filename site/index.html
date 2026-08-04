@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-code-scenes — animated themes for the Claude Code terminal</title>
-<meta name="description" content="Animated backdrops for the Claude Code terminal, and a way to design your own by describing it. Five themes ship; the rest you invent.">
+<meta name="description" content="Animated backdrops for the Claude Code terminal, and a way to design your own by describing it. Three themes ship; the rest you invent.">
 <meta property="og:title" content="claude-code-scenes">
 <meta property="og:description" content="Animated themes for the Claude Code terminal. Describe a vibe, get a theme.">
 <meta property="og:type" content="website">
@@ -184,14 +184,10 @@
   h2 { font-size: clamp(1.75rem, 4vw, 2.35rem); margin: 0 0 0.75rem; }
   .section-lede { color: var(--ink-soft); max-width: var(--measure); margin: 0 0 2.5rem; text-wrap: pretty; }
 
-  /*
-   * Two columns rather than three: a third-width tile scales the 80x24
-   * capture down far enough that the sparser scenes read as an empty black
-   * rectangle. Sakura paints about twelve petals per frame.
-   */
+  /* Three starters, three columns — an even row rather than a widow. */
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
     gap: 1.5rem;
   }
 
@@ -204,26 +200,14 @@
     flex-direction: column;
   }
   /* Cropped to a band rather than letterboxed: keeps the glyphs at a legible
-     scale while the card stays short enough that four fit on a screen. */
+     scale while the card stays short enough that all three fit on a screen. */
   .card img {
     display: block;
     width: 100%;
-    aspect-ratio: 16 / 7;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
     background: var(--term-bg);
   }
-  .card-still {
-    aspect-ratio: 16 / 7;
-    background: rgb(250,249,247);
-    color: rgb(52,38,28);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-family: var(--mono);
-    font-size: 0.8rem;
-  }
-  .sw { width: 1.5rem; height: 1.5rem; border-radius: 4px; }
   .card-body { padding: 1rem 1.15rem 1.25rem; }
   .card h3 { font-family: var(--mono); font-size: 0.95rem; margin: 0 0 0.35rem; letter-spacing: 0; }
   .card h3 .kind { color: var(--ink-faint); font-weight: 400; }
@@ -289,8 +273,8 @@
     <p class="eyebrow">for the Claude Code terminal</p>
     <h1>Themes that <span class="moves">move</span>.</h1>
     <p class="lede">
-      Animated backdrops that paint behind your conversation — rain, petals, circuitry.
-      Four ship with it. The rest you design by describing them.
+      Animated backdrops that paint behind your conversation — rain, petals, snowfall.
+      Three ship with it. The rest you design by describing them.
     </p>
 
     <div class="demo">
@@ -302,7 +286,6 @@
         <img id="s-matrix"  src="assets/scenes/matrix.svg"  alt="The matrix theme: green katakana falling in columns down a dark terminal.">
         <img id="s-sakura"  src="assets/scenes/sakura.svg"  alt="The sakura theme: pink cherry blossom petals drifting down a dark terminal." hidden>
         <img id="s-winter"  src="assets/scenes/winter.svg"  alt="The winter theme: ice-blue snow falling past a snowman in a lantern-lit yard." hidden>
-        <img id="s-voltage" src="assets/scenes/voltage.svg" alt="The voltage theme: magenta circuit glyphs falling with amber block clusters." hidden>
       </div>
     </div>
 
@@ -310,7 +293,6 @@
       <li><button role="tab" aria-selected="true"  data-theme="matrix"  data-label="rain">matrix</button></li>
       <li><button role="tab" aria-selected="false" data-theme="sakura"  data-label="petals">sakura</button></li>
       <li><button role="tab" aria-selected="false" data-theme="winter"  data-label="snowman yard">winter</button></li>
-      <li><button role="tab" aria-selected="false" data-theme="voltage" data-label="neon drizzle">voltage</button></li>
     </ul>
     <p class="caption" id="caption"></p>
 
@@ -323,10 +305,11 @@
 
 <section id="gallery">
   <div class="wrap">
-    <h2>Five to start with</h2>
+    <h2>Three to start with</h2>
     <p class="section-lede">
-      Each one is a plain JSON file — the same format anything you design lands in.
-      Copy one out and edit it, or leave them alone and make your own.
+      Deliberately few. Each is a plain JSON file written to <code>~/.claude/cct</code>
+      the first time you run it — the same format anything you design lands in. Edit
+      one in place, or delete it and it stays deleted.
     </p>
 
     <div class="grid">
@@ -354,26 +337,6 @@
         </div>
       </article>
 
-      <article class="card">
-        <img src="assets/scenes/voltage.svg" alt="voltage theme preview" loading="lazy">
-        <div class="card-body">
-          <h3>voltage <span class="kind">· neon drizzle</span></h3>
-          <p>Rain-slick chrome and hot magenta. A city that never powers down.</p>
-        </div>
-      </article>
-
-      <article class="card">
-        <div class="card-still">
-          <span class="sw" style="background:rgb(176,86,48)"></span>
-          <span class="sw" style="background:rgb(96,104,116)"></span>
-          <span class="sw" style="background:rgb(52,38,28)"></span>
-          <span>still · no scene</span>
-        </div>
-        <div class="card-body">
-          <h3>parchment <span class="kind">· light</span></h3>
-          <p>Warm paper and sepia ink. Sienna leads, slate marks the tools.</p>
-        </div>
-      </article>
     </div>
   </div>
 </section>

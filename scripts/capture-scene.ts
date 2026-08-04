@@ -53,9 +53,9 @@ const WIDTH = 80
 const HEIGHT = 24
 
 /**
- * Long enough that the slowest layer completes a cycle and the loop point is
- * not obvious. voltage's scan field moves at 0.06 cells/tick, so anything
- * much shorter reads as a still image with noise on top.
+ * Long enough that the loop point is not obvious. The slow layers set the
+ * floor: winter's distant snow drifts at 0.06 cells/tick, so anything much
+ * shorter reads as a still image with noise on top of it.
  */
 const FRAMES = 120
 
@@ -163,9 +163,10 @@ function capture(name: string, data: unknown): SceneCapture {
       ? null
       : compileScene(loaded.scene, colors, ink, SEED)
 
-  // A theme with no animation (parchment) still gets a capture — the
-  // renderers use it for the palette swatch, and an empty `frames` is the
-  // honest representation of "this one does not move".
+  // Every starter animates today, but a theme is allowed not to: `scene` is
+  // optional and `{"kind":"none"}` compiles to nothing. Such a theme still
+  // gets a capture, with an empty `frames` as the honest representation of
+  // "this one does not move", rather than failing the run.
   if (model !== null) {
     model.resize(WIDTH, HEIGHT)
     for (let i = 0; i < WARMUP; i++) model.tick()

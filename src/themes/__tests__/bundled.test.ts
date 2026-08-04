@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { getTheme, isKnownTheme } from '../../utils/theme.js'
 import { getBundledThemeNames } from '../bundled/index.js'
-import { registerStarterThemesForTest } from './registerStarters.js'
+import {
+  registerStarterThemesForTest,
+  registerWorkedExamplesForTest,
+} from './registerStarters.js'
 import { parseColor } from '../../utils/color.js'
 import { getSceneConfig } from '../../scene/registry.js'
 import { defaultRainParams } from '../../scene/types.js'
@@ -76,11 +79,21 @@ describe('bundled themes', () => {
 })
 
 describe('bundled scenes', () => {
-  test('matrix rains, sakura drifts, parchment stays still', () => {
+  test('matrix rains, sakura drifts, winter streams', () => {
     registerStarterThemesForTest()
     expect(getSceneConfig('matrix').kind).toBe('rain')
     expect(getSceneConfig('sakura').kind).toBe('petals')
+    expect(getSceneConfig('winter').kind).toBe('custom')
+  })
+
+  test('the worked examples still cover still-scenes and light mode', () => {
+    // parchment is not installed, but it is the only theme file with no scene
+    // and the only one in light mode, so it is still what proves those two
+    // paths load. See WORKED_EXAMPLES in bundled/index.ts.
+    const warnings = registerWorkedExamplesForTest()
+    expect(warnings).toEqual([])
     expect(getSceneConfig('parchment').kind).toBe('none')
+    expect(getTheme('parchment')).not.toBe(getTheme('dark'))
   })
 
   test('bundled scene params are complete after loading', () => {

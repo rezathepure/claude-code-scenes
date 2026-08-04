@@ -17,13 +17,14 @@
 import { loadThemeFromText } from '../loader.js'
 import { registerThemeWithTraits } from '../register.js'
 import type { ThemeWarning } from '../schema.js'
-import { STARTER_THEMES } from '../bundled/index.js'
+import { STARTER_THEMES, WORKED_EXAMPLES } from '../bundled/index.js'
 
-/** Registers every starter theme. Returns warnings, which should be empty. */
-export function registerStarterThemesForTest(): ThemeWarning[] {
+function register(
+  themes: ReadonlyArray<readonly [string, unknown]>,
+): ThemeWarning[] {
   const warnings: ThemeWarning[] = []
 
-  for (const [name, data] of STARTER_THEMES) {
+  for (const [name, data] of themes) {
     const result = loadThemeFromText(name, JSON.stringify(data))
     warnings.push(...result.warnings)
 
@@ -39,4 +40,20 @@ export function registerStarterThemesForTest(): ThemeWarning[] {
   }
 
   return warnings
+}
+
+/** Registers every starter theme. Returns warnings, which should be empty. */
+export function registerStarterThemesForTest(): ThemeWarning[] {
+  return register(STARTER_THEMES)
+}
+
+/**
+ * Registers the shipped-but-never-installed examples too.
+ *
+ * For the assertions that are about the theme *format* rather than about what
+ * a user gets — the light-mode load path, the composed-scene shape — which
+ * would otherwise lose their only fixture now that neither is a starter.
+ */
+export function registerWorkedExamplesForTest(): ThemeWarning[] {
+  return register(WORKED_EXAMPLES)
 }

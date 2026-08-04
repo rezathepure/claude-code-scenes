@@ -52,7 +52,7 @@ describe('canDeleteTheme', () => {
     // deleting it unlinks a file; the seed record is what stops it being
     // written back on the next launch.
     expect(canDeleteTheme('matrix')).toEqual({ deletable: true })
-    expect(canDeleteTheme('voltage')).toEqual({ deletable: true })
+    expect(canDeleteTheme('winter')).toEqual({ deletable: true })
   })
 
   test('refuses a built-in, which has no file and is the fallback', () => {
