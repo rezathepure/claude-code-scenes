@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { ColorFile } from 'color-diff-napi'
 import { getTheme, isKnownTheme } from '../../utils/theme.js'
-import {
-  getBundledThemeNames,
-  registerBundledThemes,
-} from '../bundled/index.js'
+import { getBundledThemeNames } from '../bundled/index.js'
+import { registerStarterThemesForTest } from './registerStarters.js'
 import {
   registerThemeWithTraits,
   unregisterThemeWithTraits,
@@ -78,7 +76,7 @@ describe('registering a theme also registers its syntax traits', () => {
 })
 
 describe('the bundled themes are classified correctly', () => {
-  registerBundledThemes()
+  registerStarterThemesForTest()
 
   // None of these names contains "dark" or "light", so every one of them was
   // affected by the name-sniffing bug. Listed explicitly rather than derived,
@@ -86,6 +84,7 @@ describe('the bundled themes are classified correctly', () => {
   const expected: Array<[string, 'dark' | 'light']> = [
     ['matrix', 'dark'],
     ['sakura', 'dark'],
+    ['winter', 'dark'],
     ['parchment', 'light'],
     ['voltage', 'dark'],
   ]

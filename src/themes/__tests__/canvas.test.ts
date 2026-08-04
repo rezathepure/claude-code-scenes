@@ -11,14 +11,14 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { getSceneConfig } from '../../scene/registry.js'
 import { getTheme } from '../../utils/theme.js'
-import { registerBundledThemes } from '../bundled/index.js'
+import { registerStarterThemesForTest } from './registerStarters.js'
 import { canvasThemeFor } from '../canvas.js'
 import {
   registerThemeWithTraits,
   unregisterThemeWithTraits,
 } from '../register.js'
 
-registerBundledThemes()
+registerStarterThemesForTest()
 
 const registered: string[] = []
 afterEach(() => {

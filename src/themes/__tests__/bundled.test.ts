@@ -1,15 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { getTheme, isKnownTheme } from '../../utils/theme.js'
-import {
-  getBundledThemeNames,
-  registerBundledThemes,
-} from '../bundled/index.js'
+import { getBundledThemeNames } from '../bundled/index.js'
+import { registerStarterThemesForTest } from './registerStarters.js'
 import { parseColor } from '../../utils/color.js'
 import { getSceneConfig } from '../../scene/registry.js'
 import { defaultRainParams } from '../../scene/types.js'
 
 describe('bundled themes', () => {
-  const warnings = registerBundledThemes()
+  const warnings = registerStarterThemesForTest()
 
   test('load through the real pipeline with no warnings at all', () => {
     // Matrix and Sakura are the worked examples the generator must match. Any
@@ -79,14 +77,14 @@ describe('bundled themes', () => {
 
 describe('bundled scenes', () => {
   test('matrix rains, sakura drifts, parchment stays still', () => {
-    registerBundledThemes()
+    registerStarterThemesForTest()
     expect(getSceneConfig('matrix').kind).toBe('rain')
     expect(getSceneConfig('sakura').kind).toBe('petals')
     expect(getSceneConfig('parchment').kind).toBe('none')
   })
 
   test('bundled scene params are complete after loading', () => {
-    registerBundledThemes()
+    registerStarterThemesForTest()
     const rain = getSceneConfig('matrix')
     if (rain.kind !== 'rain') throw new Error('expected rain')
     // Matrix deliberately runs quieter than the primitive's default — full

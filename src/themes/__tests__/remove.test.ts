@@ -12,7 +12,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test'
-import { registerBundledThemes } from '../bundled/index.js'
+import { registerStarterThemesForTest } from './registerStarters.js'
 import { canDeleteTheme } from '../remove.js'
 import {
   registerThemeWithTraits,
@@ -20,7 +20,7 @@ import {
 } from '../register.js'
 import { getTheme } from '../../utils/theme.js'
 
-registerBundledThemes()
+registerStarterThemesForTest()
 
 const registered: string[] = []
 afterEach(() => {
@@ -47,9 +47,10 @@ describe('canDeleteTheme', () => {
     expect(canDeleteTheme('test-only-official')).toEqual({ deletable: true })
   })
 
-  test('allows a bundled theme, which is hidden rather than unlinked', () => {
-    // matrix lives inside the binary; the deletion is recorded in config so
-    // registerBundledThemes stops handing it back.
+  test('allows a starter theme, which is a real file like any other', () => {
+    // matrix ships in the package but is seeded into ~/.claude/cct, so
+    // deleting it unlinks a file; the seed record is what stops it being
+    // written back on the next launch.
     expect(canDeleteTheme('matrix')).toEqual({ deletable: true })
     expect(canDeleteTheme('voltage')).toEqual({ deletable: true })
   })

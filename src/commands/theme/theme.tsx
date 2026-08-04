@@ -198,15 +198,16 @@ async function handleDelete(name: string, onDone: Props['onDone']): Promise<void
 }
 
 /**
- * Brings back a bundled theme the user deleted.
+ * Writes a deleted starter theme's file back.
  *
- * Deleting one only records the name — there is no file to restore — so this
- * is the whole undo. Without it a shipped theme would be gone for good, which
- * is too sharp an edge for a key you can press by accident.
+ * Only starter themes can be restored: they are the ones with a pristine copy
+ * inside the package. Anything the user wrote is gone once deleted, which is
+ * why this exists at all — deleting is a key you can press by accident.
  */
-function handleRestore(name: string, onDone: Props['onDone']): void {
-  if (!restoreTheme(name)) {
-    onDone(`“${name}” is not a deleted theme. Deleted: ${hiddenThemeNames().join(', ') || 'none'}.`, {
+async function handleRestore(name: string, onDone: Props['onDone']): Promise<void> {
+  if (!(await restoreTheme(name))) {
+    const missing = hiddenThemeNames();
+    onDone(`“${name}” is not a deleted starter theme. Restorable: ${missing.join(', ') || 'none'}.`, {
       display: 'system',
     });
     return;
@@ -227,7 +228,7 @@ export const call: LocalJSXCommandCall = async (onDone, _context, args) => {
       await handleDelete(parsed.name, onDone);
       return null;
     case 'restore':
-      handleRestore(parsed.name, onDone);
+      await handleRestore(parsed.name, onDone);
       return null;
     case 'error':
       onDone(parsed.message, { display: 'system' });

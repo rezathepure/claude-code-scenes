@@ -31,23 +31,17 @@ import { compileScene } from '../src/scene/compile.js'
 import type { SceneStyleInterner } from '../src/scene/colors.js'
 import { sceneLabelOf } from '../src/scene/label.js'
 import { loadThemeFromText } from '../src/themes/loader.js'
-import matrix from '../src/themes/bundled/matrix.json'
-import parchment from '../src/themes/bundled/parchment.json'
-import sakura from '../src/themes/bundled/sakura.json'
-import voltage from '../src/themes/bundled/voltage.json'
+import { STARTER_THEMES } from '../src/themes/bundled/index.js'
 
 /**
- * Same shape and order as src/themes/bundled/index.ts. Duplicated as a plain
- * list rather than imported because that module's registration path reads
- * global config and writes into the ink registry — side effects a capture
- * script has no business triggering.
+ * Imported rather than duplicated. The starter list used to be re-declared
+ * here because importing that module meant running its registration path,
+ * which read global config and wrote into the ink registry — side effects a
+ * capture script has no business triggering. It is a plain data export now,
+ * so there is one place a new theme has to be added and the captures cannot
+ * silently miss it.
  */
-const BUNDLED: ReadonlyArray<readonly [string, unknown]> = [
-  ['matrix', matrix],
-  ['sakura', sakura],
-  ['parchment', parchment],
-  ['voltage', voltage],
-]
+const BUNDLED = STARTER_THEMES
 
 /**
  * 80x24 is a normal terminal and one of the sizes golden.test.ts pins, so a

@@ -8,24 +8,27 @@
  *
  * Only the six built-ins are undeletable, and for a concrete reason: they
  * have no file and no registry entry of ours: they are the palettes ink falls
- * back to, so "removing" one would leave the app with nothing to render. The
- * other three origins all resolve to something we can actually act on:
+ * back to, so "removing" one would leave the app with nothing to render.
+ * Everything else resolves to a file we can actually unlink:
  *
- * - `cc`       — our own file in ~/.claude/cct. Removed.
+ * - `cc`       — our own file in ~/.claude/cct. Removed. Starter themes are
+ *                seeded into that directory too, so they are this case as
+ *                well; the seed record is what stops one reappearing on the
+ *                next launch, and `/theme restore <name>` writes it back.
  * - `official` — a real file in ~/.claude/themes. Also removed; refusing only
  *                meant the user had to go and do it by hand.
- * - `bundled`  — inside the binary, so there is nothing to unlink. The name is
- *                recorded in `hiddenThemes` instead and registerBundledThemes
- *                skips it, which is what makes the deletion survive a restart.
- *                `/theme restore <name>` puts it back.
  */
 
-import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
 import { isKnownTheme, isReservedThemeName } from '../utils/theme.js'
 import { getOfficialThemesDir } from './loader.js'
 import { getThemeOrigin } from './meta.js'
 import { unregisterThemeWithTraits } from './register.js'
 import { deleteThemeFile } from './save.js'
+import {
+  isStarterTheme,
+  restoreStarterTheme,
+  starterThemeNames,
+} from './seed.js'
 
 export type DeleteEligibility =
   | { deletable: true }
@@ -54,28 +57,17 @@ export type DeleteOutcome =
   | { ok: true; message: string }
   | { ok: false; message: string }
 
-/** Records a bundled theme as deleted, since there is no file to unlink. */
-async function hideBundledTheme(name: string): Promise<void> {
-  if ((getGlobalConfig().hiddenThemes ?? []).includes(name)) return
-  saveGlobalConfig(current => ({
-    ...current,
-    hiddenThemes: [...(current.hiddenThemes ?? []), name],
-  }))
+/**
+ * Writes a deleted starter theme's file back. Returns false if the name is
+ * not a starter theme, or if its file is already there.
+ */
+export async function restoreTheme(name: string): Promise<boolean> {
+  return await restoreStarterTheme(name)
 }
 
-/** Undoes hideBundledTheme. Returns false if the theme was not hidden. */
-export function restoreTheme(name: string): boolean {
-  if (!(getGlobalConfig().hiddenThemes ?? []).includes(name)) return false
-  saveGlobalConfig(current => ({
-    ...current,
-    hiddenThemes: (current.hiddenThemes ?? []).filter(n => n !== name),
-  }))
-  return true
-}
-
-/** Every bundled theme the user has deleted. */
+/** Starter themes with no file on disk — the ones `/theme restore` can bring back. */
 export function hiddenThemeNames(): string[] {
-  return [...(getGlobalConfig().hiddenThemes ?? [])]
+  return starterThemeNames().filter(name => !isKnownTheme(name))
 }
 
 /**
@@ -93,15 +85,6 @@ export async function removeTheme(name: string): Promise<DeleteOutcome> {
 
   const origin = getThemeOrigin(name)
 
-  if (origin === 'bundled') {
-    await hideBundledTheme(name)
-    unregisterThemeWithTraits(name)
-    return {
-      ok: true,
-      message: `Removed “${name}”. It ships with cct, so run /theme restore ${name} to bring it back.`,
-    }
-  }
-
   const result = await deleteThemeFile(
     name,
     origin === 'official' ? getOfficialThemesDir() : undefined,
@@ -111,5 +94,15 @@ export async function removeTheme(name: string): Promise<DeleteOutcome> {
   }
 
   unregisterThemeWithTraits(name)
+
+  // Starter themes are seeded rather than authored, so there is a pristine
+  // copy in the package to put back. Say so — otherwise deleting one looks
+  // irreversible in a way it is not.
+  if (isStarterTheme(name)) {
+    return {
+      ok: true,
+      message: `Deleted “${name}”. It ships with cct, so run /theme restore ${name} to bring it back.`,
+    }
+  }
   return { ok: true, message: `Deleted “${name}”.` }
 }

@@ -57,7 +57,7 @@ import { initSentry } from '../utils/sentry.js'
 import { initUser } from '../utils/user.js'
 import { initLangfuse, shutdownLangfuse } from '../services/langfuse/index.js'
 import { setThemeConfigCallbacks, validateThemeSetting } from '@anthropic/ink'
-import { registerBundledThemes } from '../themes/bundled/index.js'
+import { seedStarterThemes } from '../themes/seed.js'
 import { loadUserThemes } from '../themes/loader.js'
 import { migrateLegacyThemes } from '../themes/migrate.js'
 import { initializeThemeWatcher } from '../themes/watcher.js'
@@ -76,14 +76,17 @@ export const init = memoize(async (): Promise<void> => {
   try {
     const configsStart = Date.now()
     enableConfigs()
-    // Themes must be registered before anything reads the stored theme
-    // preference, or validateThemeSetting below would report every user theme
-    // as missing and quietly reset the user's choice to dark.
-    registerBundledThemes()
     // Move our theme files out of the directory official Claude Code also
     // reads — must run before the watcher starts, or our own renames would
     // trigger reload churn.
     await migrateLegacyThemes()
+    // Put the shipped starter themes on disk. After the migration, so a file
+    // the user already had wins over the shipped copy, and before the load
+    // below, which is what actually registers them.
+    await seedStarterThemes()
+    // Registers every theme, and must happen before anything reads the stored
+    // theme preference — otherwise validateThemeSetting below would report the
+    // user's theme as missing and quietly reset their choice to dark.
     const { warnings: themeWarnings } = await loadUserThemes()
     for (const warning of themeWarnings) {
       logForDebugging(`[themes] ${warning.theme}: ${warning.message}`, {

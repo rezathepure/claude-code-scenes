@@ -243,9 +243,9 @@ export type GlobalConfig = {
   /**
    * Themes that ship inside the binary and have been deleted by the user.
    *
-   * Bundled themes have no file to remove, so deleting one has to be recorded
-   * rather than performed — otherwise registerBundledThemes would hand it
-   * straight back on the next launch. `/theme restore <name>` empties an entry.
+   * @deprecated Starter themes are written to ~/.claude/cct as real files now
+   * (see src/themes/seed.ts), so deleting one unlinks it and needs no record.
+   * Retained only so an entry written by an older version still parses.
    */
   hiddenThemes: string[]
   /**
