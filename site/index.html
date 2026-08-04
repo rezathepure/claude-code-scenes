@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-code-scenes — animated themes for the Claude Code terminal</title>
+<meta name="description" content="Animated backdrops for the Claude Code terminal, and a way to design your own by describing it. Four themes ship; the rest you invent.">
+<meta property="og:title" content="claude-code-scenes">
+<meta property="og:description" content="Animated themes for the Claude Code terminal. Describe a vibe, get a theme.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>✦</text></svg>">
+<style>
+  :root {
+    --bg:        #faf9f7;
+    --surface:   #ffffff;
+    --edge:      #e6e0d8;
+    --ink:       #2c2622;
+    --ink-soft:  #6b6058;
+    --ink-faint: #9a8f85;
+    --accent:    #c25c38;
+    --accent-sf: #f2e3db;
+    --term-bg:   #0d0d0e;
+
+    --serif: ui-serif, Iowan Old Style, Palatino, Georgia, serif;
+    --sans:  ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
+    --measure: 34rem;
+    --gutter: clamp(1.25rem, 5vw, 3rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      /* Warm dark, not blue-black — the brand's whole temperature argument. */
+      --bg:        #17130f;
+      --surface:   #1f1a15;
+      --edge:      #332a23;
+      --ink:       #ece5dd;
+      --ink-soft:  #a99b8d;
+      --ink-faint: #7a6d61;
+      --accent:    #e08a63;
+      --accent-sf: #2e211a;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 68rem; margin: 0 auto; padding: 0 var(--gutter); }
+
+  a { color: var(--accent); text-underline-offset: 3px; }
+  code, kbd { font-family: var(--mono); font-size: 0.88em; }
+
+  h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: -0.015em; line-height: 1.15; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 1.25rem;
+  }
+
+  /* ---------- hero ---------- */
+
+  header { padding: clamp(3.5rem, 9vw, 6.5rem) 0 0; }
+
+  h1 { font-size: clamp(2.6rem, 7vw, 4.25rem); margin: 0 0 1rem; }
+  h1 .moves { color: var(--accent); font-style: italic; }
+
+  .lede {
+    font-size: clamp(1.05rem, 2.4vw, 1.3rem);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 2rem;
+    text-wrap: pretty;
+  }
+
+  /* ---------- the terminal demo ---------- */
+
+  .demo {
+    background: var(--term-bg);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 32px -12px rgba(0,0,0,.28);
+  }
+
+  .demo-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.16); }
+  .demo-title {
+    margin-left: 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: rgba(255,255,255,.4);
+  }
+
+  .stage { position: relative; }
+  /* Reserve the aspect up front so switching themes cannot shift the page. */
+  .stage img { display: block; width: 100%; height: auto; aspect-ratio: 720 / 456; }
+  .stage img[hidden] { display: none; }
+
+  /* ---------- theme switcher ---------- */
+
+  .switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .switch button {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .switch button:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .switch button[aria-selected="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-sf);
+  }
+  .caption {
+    font-size: 0.9rem;
+    color: var(--ink-faint);
+    margin: 0.85rem 0 0;
+    min-height: 1.65em;
+  }
+  .caption .label { font-family: var(--mono); color: var(--ink-soft); }
+
+  /* ---------- install ---------- */
+
+  .install {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 2.25rem 0 0;
+  }
+  .cmd {
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 7px;
+    padding: 0.6rem 0.95rem;
+  }
+  .cmd .prompt { color: var(--ink-faint); user-select: none; }
+  .ghost {
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--edge);
+    padding-bottom: 1px;
+  }
+  .ghost:hover { color: var(--ink); border-color: var(--ink-faint); }
+
+  /* ---------- sections ---------- */
+
+  section { padding: clamp(4rem, 10vw, 7rem) 0 0; }
+  h2 { font-size: clamp(1.75rem, 4vw, 2.35rem); margin: 0 0 0.75rem; }
+  .section-lede { color: var(--ink-soft); max-width: var(--measure); margin: 0 0 2.5rem; text-wrap: pretty; }
+
+  /*
+   * Two columns, not three. Four themes make a clean 2x2 instead of an
+   * orphaned fourth card, and — the real reason — a third-width tile scales
+   * the 80x24 capture down far enough that the sparser scenes read as an
+   * empty black rectangle. Sakura paints about twelve petals per frame.
+   */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Cropped to a band rather than letterboxed: keeps the glyphs at a legible
+     scale while the card stays short enough that four fit on a screen. */
+  .card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    object-fit: cover;
+    background: var(--term-bg);
+  }
+  .card-still {
+    aspect-ratio: 16 / 7;
+    background: rgb(250,249,247);
+    color: rgb(52,38,28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+  }
+  .sw { width: 1.5rem; height: 1.5rem; border-radius: 4px; }
+  .card-body { padding: 1rem 1.15rem 1.25rem; }
+  .card h3 { font-family: var(--mono); font-size: 0.95rem; margin: 0 0 0.35rem; letter-spacing: 0; }
+  .card h3 .kind { color: var(--ink-faint); font-weight: 400; }
+  .card p { margin: 0; font-size: 0.92rem; color: var(--ink-soft); }
+
+  /* ---------- the create flow ---------- */
+
+  .steps { display: grid; gap: 1.75rem; max-width: 46rem; }
+  .step { display: grid; grid-template-columns: 2.25rem 1fr; gap: 1rem; align-items: start; }
+  .step .n {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    width: 1.9rem; height: 1.9rem;
+    display: grid; place-items: center;
+  }
+  .step h3 { font-family: var(--sans); font-size: 1rem; font-weight: 600; margin: 0.2rem 0 0.3rem; }
+  .step p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+
+  .vibes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.7rem 0 0; padding: 0; list-style: none; }
+  .vibes li {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    border: 1px dashed var(--edge);
+    border-radius: 5px;
+    padding: 0.2rem 0.55rem;
+  }
+
+  .note {
+    border-left: 2px solid var(--accent);
+    padding: 0.15rem 0 0.15rem 1.1rem;
+    margin: 2.5rem 0 0;
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    margin-top: clamp(4rem, 10vw, 7rem);
+    border-top: 1px solid var(--edge);
+    padding: 2.5rem 0 4rem;
+    font-size: 0.87rem;
+    color: var(--ink-faint);
+  }
+  footer p { max-width: 44rem; margin: 0 0 0.9rem; text-wrap: pretty; }
+  footer a { color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">for the Claude Code terminal</p>
+    <h1>Themes that <span class="moves">move</span>.</h1>
+    <p class="lede">
+      Animated backdrops that paint behind your conversation — rain, petals, circuitry.
+      Four ship with it. The rest you design by describing them.
+    </p>
+
+    <div class="demo">
+      <div class="demo-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="demo-title">cct</span>
+      </div>
+      <div class="stage">
+        <img id="s-matrix"  src="assets/scenes/matrix.svg"  alt="The matrix theme: green katakana falling in columns down a dark terminal.">
+        <img id="s-sakura"  src="assets/scenes/sakura.svg"  alt="The sakura theme: pink cherry blossom petals drifting down a dark terminal." hidden>
+        <img id="s-voltage" src="assets/scenes/voltage.svg" alt="The voltage theme: magenta circuit glyphs falling with amber block clusters." hidden>
+      </div>
+    </div>
+
+    <ul class="switch" role="tablist" aria-label="Choose a theme to preview">
+      <li><button role="tab" aria-selected="true"  data-theme="matrix"  data-label="rain">matrix</button></li>
+      <li><button role="tab" aria-selected="false" data-theme="sakura"  data-label="petals">sakura</button></li>
+      <li><button role="tab" aria-selected="false" data-theme="voltage" data-label="neon drizzle">voltage</button></li>
+    </ul>
+    <p class="caption" id="caption"></p>
+
+    <div class="install">
+      <span class="cmd"><span class="prompt">$ </span>npm i -g claude-code-scenes</span>
+      <a class="ghost" href="https://github.com/rezathepure/claude-code-scenes">Source on GitHub →</a>
+    </div>
+  </div>
+</header>
+
+<section id="gallery">
+  <div class="wrap">
+    <h2>Four to start with</h2>
+    <p class="section-lede">
+      Each one is a plain JSON file — the same format anything you design lands in.
+      Copy one out and edit it, or leave them alone and make your own.
+    </p>
+
+    <div class="grid">
+      <article class="card">
+        <img src="assets/scenes/matrix.svg" alt="matrix theme preview" loading="lazy">
+        <div class="card-body">
+          <h3>matrix <span class="kind">· rain</span></h3>
+          <p>Phosphor-green terminal. One hue with discipline.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <img src="assets/scenes/sakura.svg" alt="sakura theme preview" loading="lazy">
+        <div class="card-body">
+          <h3>sakura <span class="kind">· petals</span></h3>
+          <p>A cherry-blossom night. Sakura pink leads, honey pays the bills.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <img src="assets/scenes/voltage.svg" alt="voltage theme preview" loading="lazy">
+        <div class="card-body">
+          <h3>voltage <span class="kind">· neon drizzle</span></h3>
+          <p>Rain-slick chrome and hot magenta. A city that never powers down.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-still">
+          <span class="sw" style="background:rgb(176,86,48)"></span>
+          <span class="sw" style="background:rgb(96,104,116)"></span>
+          <span class="sw" style="background:rgb(52,38,28)"></span>
+          <span>still · no scene</span>
+        </div>
+        <div class="card-body">
+          <h3>parchment <span class="kind">· light</span></h3>
+          <p>Warm paper and sepia ink. Sienna leads, slate marks the tools.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="design">
+  <div class="wrap">
+    <h2>Or describe one</h2>
+    <p class="section-lede">
+      <code>/theme create</code> hands your description to the model, which designs the
+      palette and the animation together. You review it before it is written anywhere.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <span class="n">1</span>
+        <div>
+          <h3>Say what you want</h3>
+          <p>A mood is enough. These are the examples the prompt box offers:</p>
+          <ul class="vibes">
+            <li>cyberpunk thunderstorm</li>
+            <li>moody vampire castle</li>
+            <li>autumn library at dusk</li>
+            <li>sakura in moonlight</li>
+            <li>phosphor terminal, 1984</li>
+            <li>sunlit sea glass</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="n">2</span>
+        <div>
+          <h3>Watch it before you keep it</h3>
+          <p>
+            The draft is registered live and previewed two ways — the backdrop
+            animating at full size, and a scripted session that exercises about
+            fifteen colour slots so you can see what real output looks like.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="n">3</span>
+        <div>
+          <h3>Change it in plain language</h3>
+          <p>
+            “slower”. “add drifting embers”. “calmer warnings”. Each refinement returns
+            a delta, so anything you did not mention stays exactly as it was — and you
+            can undo.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">
+      <strong>The renderer ships once; the model ships content.</strong>
+      An animation is described entirely in the theme's JSON — layers, motion verbs,
+      glyph catalogues, one arithmetic expression for rhythm. That is what lets a
+      binary you installed from npm produce an animation nobody wrote into it.
+      Nothing in a theme file is ever executed: no <code>eval</code>, no
+      <code>Function</code>, no property access — just a hand-written parser with hard
+      caps and a fuzz test.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>
+      <strong>Not affiliated with Anthropic.</strong>
+      “Claude”, “Claude Code” and “Anthropic” belong to
+      <a href="https://www.anthropic.com/">Anthropic PBC</a>, and all rights in Claude
+      Code and the Claude models are theirs. If you want the supported, official tool,
+      use <a href="https://docs.anthropic.com/en/docs/claude-code">Anthropic's Claude Code</a>.
+    </p>
+    <p>
+      This is a fork of
+      <a href="https://github.com/claude-code-best/claude-code">claude-code-best/claude-code</a>,
+      an independent reverse-engineered reproduction that is not Anthropic's official
+      distribution. The animated-theme work is what this fork adds. Bring your own API
+      credentials; you pay for your own usage. Provided as-is, with no warranty.
+    </p>
+    <p>
+      <a href="https://github.com/rezathepure/claude-code-scenes/blob/main/NOTICE.md">Full notice and licensing</a>
+      ·
+      <a href="https://github.com/rezathepure/claude-code-scenes">GitHub</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Preview switching. Each theme is its own <img>, so the browser runs the
+  // SVG's CSS timeline for us and there is no animation loop to write.
+  (function () {
+    var caption = document.getElementById('caption');
+    var buttons = Array.prototype.slice.call(
+      document.querySelectorAll('.switch button')
+    );
+
+    function show(name, label) {
+      buttons.forEach(function (b) {
+        var on = b.dataset.theme === name;
+        b.setAttribute('aria-selected', String(on));
+        var img = document.getElementById('s-' + b.dataset.theme);
+        if (img) img.hidden = !on;
+      });
+      caption.innerHTML = '<span class="label">' + name + '</span> · ' + label;
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        show(b.dataset.theme, b.dataset.label);
+      });
+    });
+
+    show('matrix', 'rain');
+  })();
+</script>
+
+</body>
+</html>
