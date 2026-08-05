@@ -63,3 +63,6 @@ assets/scenes/*.json
 
 # GitHub Pages build output (bun run site:build)
 _site/
+
+# Personal handoff notes — working doc, not part of the project.
+"to be filled later.md"
