@@ -11,7 +11,7 @@
  * back to, so "removing" one would leave the app with nothing to render.
  * Everything else resolves to a file we can actually unlink:
  *
- * - `cc`       — our own file in ~/.claude/cct. Removed. Starter themes are
+ * - `cc`       — our own file in ~/.claude/ccs. Removed. Starter themes are
  *                seeded into that directory too, so they are this case as
  *                well; the seed record is what stops one reappearing on the
  *                next launch, and `/theme restore <name>` writes it back.
@@ -101,7 +101,7 @@ export async function removeTheme(name: string): Promise<DeleteOutcome> {
   if (isStarterTheme(name)) {
     return {
       ok: true,
-      message: `Deleted “${name}”. It ships with cct, so run /theme restore ${name} to bring it back.`,
+      message: `Deleted “${name}”. It ships with ccs, so run /theme restore ${name} to bring it back.`,
     }
   }
   return { ok: true, message: `Deleted “${name}”.` }

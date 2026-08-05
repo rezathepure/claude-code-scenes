@@ -1,5 +1,5 @@
 /**
- * Writes the starter themes into ~/.claude/cct as ordinary theme files.
+ * Writes the starter themes into ~/.claude/ccs as ordinary theme files.
  *
  * They used to be registered straight out of the binary at startup, which
  * made them a category of their own: undeletable in the normal sense (there
@@ -33,10 +33,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { logForDebugging } from '../utils/debug.js'
 import { STARTER_THEMES } from './bundled/index.js'
-import { getCctThemesDir } from './loader.js'
+import { getCcsThemesDir } from './loader.js'
 
-/** Names already seeded, one per line. Extensionless so the scanner skips it. */
-const SEED_RECORD_FILENAME = '.seeded'
+/**
+ * Names already seeded, one per line. Extensionless so the scanner skips it.
+ * Exported for the migration, which has to carry it across a directory rename
+ * — leave it behind and every starter theme the user deleted comes back.
+ */
+export const SEED_RECORD_FILENAME = '.seeded'
 
 export type SeedResult = {
   /** Names written to disk by this call. */
@@ -54,7 +58,7 @@ export function isStarterTheme(name: string): boolean {
 }
 
 function recordPath(): string {
-  return join(getCctThemesDir(), SEED_RECORD_FILENAME)
+  return join(getCcsThemesDir(), SEED_RECORD_FILENAME)
 }
 
 async function readRecord(): Promise<Set<string>> {
@@ -97,7 +101,7 @@ function serialise(data: unknown): string {
  * is already in place and wins over the shipped copy.
  */
 export async function seedStarterThemes(): Promise<SeedResult> {
-  const dir = getCctThemesDir()
+  const dir = getCcsThemesDir()
   const written: string[] = []
 
   try {
@@ -147,9 +151,9 @@ export async function restoreStarterTheme(name: string): Promise<boolean> {
   if (entry === undefined) return false
 
   try {
-    await mkdir(getCctThemesDir(), { recursive: true })
+    await mkdir(getCcsThemesDir(), { recursive: true })
     await writeFile(
-      join(getCctThemesDir(), `${name}.json`),
+      join(getCcsThemesDir(), `${name}.json`),
       serialise(entry[1]),
       { encoding: 'utf8', flag: 'wx' },
     )

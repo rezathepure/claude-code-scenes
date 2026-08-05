@@ -1,5 +1,5 @@
 /**
- * `cct update` — Check and install the latest version of this package.
+ * `ccs update` — Check and install the latest version of this package.
  *
  * Detection strategy:
  *  1. If `bun` is available and the current installation was done via bun → use `bun update -g`
@@ -120,7 +120,7 @@ export async function updateCCB(): Promise<void> {
 
   // Already up to date?
   if (latestVersion === currentVersion || gte(currentVersion, latestVersion)) {
-    writeToStdout(chalk.green(`cct is up to date (${currentVersion})`) + '\n')
+    writeToStdout(chalk.green(`ccs is up to date (${currentVersion})`) + '\n')
     await gracefulShutdown(0)
     return
   }

@@ -26,13 +26,13 @@ Skip this section if it isn't.
 - **Does `/tui status` say enabled?** Scenes only paint in the alternate
   screen buffer. It is on by default; `/tui on` turns it back on, and the
   change takes effect on the next start.
-- **Attach the theme file** if you designed it — `~/.claude/cct/<name>.json`.
+- **Attach the theme file** if you designed it — `~/.claude/ccs/<name>.json`.
 
 ## Environment
 
 | | |
 |---|---|
-| Version (`cct --version`) | |
+| Version (`ccs --version`) | |
 | Install method | npm / built from source |
 | OS | |
 | Terminal | e.g. iTerm2, Windows Terminal, Ghostty, tmux |

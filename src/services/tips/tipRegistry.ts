@@ -376,7 +376,7 @@ const externalTips: Tip[] = [
   {
     id: 'continue',
     content: async () =>
-      'Run cct --continue or cct --resume to resume a conversation',
+      'Run ccs --continue or ccs --resume to resume a conversation',
     cooldownSessions: 10,
     isRelevant: async () => true,
   },

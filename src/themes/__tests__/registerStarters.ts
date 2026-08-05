@@ -3,7 +3,7 @@
  * filesystem.
  *
  * In the app they get there by a different route — `seedStarterThemes` writes
- * them into ~/.claude/cct and `loadUserThemes` reads them back — but these
+ * them into ~/.claude/ccs and `loadUserThemes` reads them back — but these
  * tests are asserting things about the themes themselves (that they load
  * warning-free, that their palettes are complete, that they can be deleted),
  * not about how they reach disk. Driving the real seed path would mean a temp

@@ -2,7 +2,7 @@
  * The starter themes: real theme files that ship inside the package.
  *
  * Shipping them is only how they get onto the machine. They are not loaded
- * from here — `seedStarterThemes` writes them into ~/.claude/cct on first run
+ * from here — `seedStarterThemes` writes them into ~/.claude/ccs on first run
  * and `loadUserThemes` picks them up from disk like anything the user wrote,
  * so a starter theme is editable, hot-reloadable and deletable as a file
  * rather than being a privileged category baked into the binary.

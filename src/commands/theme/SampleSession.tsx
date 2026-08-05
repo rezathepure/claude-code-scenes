@@ -189,7 +189,7 @@ export const SAMPLE_LINES: readonly SampleLine[] = [
     render: () => (
       <Text wrap="truncate-end">
         <Text color="bashBorder">! </Text>
-        <Text color="text">cat ~/.claude/cct/{'{name}'}.json</Text>
+        <Text color="text">cat ~/.claude/ccs/{'{name}'}.json</Text>
       </Text>
     ),
   },

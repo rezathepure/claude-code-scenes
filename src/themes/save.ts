@@ -14,7 +14,7 @@ import type { SceneConfig } from '../scene/types.js'
 import { isKnownTheme, isReservedThemeName } from '../utils/theme.js'
 import { THEME_SCHEMA_REF } from './jsonSchema.js'
 import { serializeSceneConfig } from './schema.js'
-import { getCctThemesDir } from './loader.js'
+import { getCcsThemesDir } from './loader.js'
 
 export type SaveResult =
   | { ok: true; name: string; path: string }
@@ -101,7 +101,7 @@ export async function exportTheme(
  */
 export async function deleteThemeFile(
   name: string,
-  dir: string = getCctThemesDir(),
+  dir: string = getCcsThemesDir(),
 ): Promise<SaveResult> {
   const path = join(dir, `${name}.json`)
   try {
@@ -126,7 +126,7 @@ export async function saveGeneratedTheme(
     scene?: SceneConfig
   },
 ): Promise<SaveResult> {
-  const dir = getCctThemesDir()
+  const dir = getCcsThemesDir()
   const path = join(dir, `${name}.json`)
 
   try {

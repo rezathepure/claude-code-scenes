@@ -34,8 +34,8 @@
     "bun": ">=1.3.0"
   },
   "bin": {
-    "cct": "dist/cli-node.js",
-    "cct-bun": "dist/cli-bun.js",
+    "ccs": "dist/cli-node.js",
+    "ccs-bun": "dist/cli-bun.js",
     "claude-code-scenes": "dist/cli-node.js"
   },
   "workspaces": [

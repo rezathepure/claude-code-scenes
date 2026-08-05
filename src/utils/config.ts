@@ -243,7 +243,7 @@ export type GlobalConfig = {
   /**
    * Themes that ship inside the binary and have been deleted by the user.
    *
-   * @deprecated Starter themes are written to ~/.claude/cct as real files now
+   * @deprecated Starter themes are written to ~/.claude/ccs as real files now
    * (see src/themes/seed.ts), so deleting one unlinks it and needs no record.
    * Retained only so an entry written by an older version still parses.
    */

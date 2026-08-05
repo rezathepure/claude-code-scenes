@@ -28,7 +28,7 @@ function officialDir(): string {
   return join(tempDir, 'themes')
 }
 function ccDir(): string {
-  return join(tempDir, 'cct')
+  return join(tempDir, 'ccs')
 }
 
 beforeEach(async () => {
@@ -114,7 +114,7 @@ describe('migrateLegacyThemes', () => {
     expect(result).toEqual({ moved: [], skipped: [], schemaRemoved: false })
     // The cc dir must exist regardless — the watcher cannot watch a missing
     // dir, and the first /theme create must land somewhere watched.
-    expect(await readdir(tempDir)).toContain('cct')
+    expect(await readdir(tempDir)).toContain('ccs')
   })
 
   test('running twice is a no-op the second time', async () => {
@@ -129,9 +129,11 @@ describe('migrateLegacyThemes', () => {
   })
 })
 
-describe('the cc-themes → cct rename', () => {
+// The directory has been renamed twice — cc-themes → cct → ccs — and either
+// old name may still be sitting in somebody's ~/.claude, so both must drain.
+describe.each(['cc-themes', 'cct'])('the %s → ccs rename', legacyName => {
   function legacyDir(): string {
-    return join(tempDir, 'cc-themes')
+    return join(tempDir, legacyName)
   }
 
   test('moves saved themes into the new directory and retires the old one', async () => {
@@ -150,7 +152,22 @@ describe('the cc-themes → cct rename', () => {
       'yellowish.json',
     ])
     // The old directory is gone entirely, schema and all.
-    expect(await readdir(tempDir)).not.toContain('cc-themes')
+    expect(await readdir(tempDir)).not.toContain(legacyName)
+  })
+
+  test('carries the seed record across, so deleted starters stay deleted', async () => {
+    // Leave .seeded behind and every starter theme the user deleted is
+    // written back on the next launch — the one bug a directory rename can
+    // introduce that looks like the app ignoring you.
+    await mkdir(legacyDir(), { recursive: true })
+    await writeFile(join(legacyDir(), '.seeded'), 'matrix\nsakura\nwinter\n')
+
+    await migrateLegacyThemes()
+
+    expect(await readFile(join(ccDir(), '.seeded'), 'utf-8')).toBe(
+      'matrix\nsakura\nwinter\n',
+    )
+    expect(await readdir(tempDir)).not.toContain(legacyName)
   })
 
   test('never clobbers a theme that already exists under the new name', async () => {
@@ -189,5 +206,27 @@ describe('the cc-themes → cct rename', () => {
     expect(second.moved).toEqual([])
     expect(second.skipped).toEqual([])
     expect(await readdir(ccDir())).toEqual(['once.json'])
+  })
+})
+
+describe('two legacy directories at once', () => {
+  test('the more recent name wins a filename collision', async () => {
+    // Someone who has been on this fork since before both renames can have a
+    // theme of the same name in each. cct is the newer of the two, so its
+    // copy is the one that survives.
+    const old = join(tempDir, 'cc-themes')
+    const newer = join(tempDir, 'cct')
+    await mkdir(old, { recursive: true })
+    await mkdir(newer, { recursive: true })
+    await writeFile(join(old, 'clash.json'), OURS)
+    await writeFile(join(newer, 'clash.json'), '{"mode":"light","colors":{}}')
+
+    await migrateLegacyThemes()
+
+    expect(await readFile(join(ccDir(), 'clash.json'), 'utf-8')).toContain(
+      'light',
+    )
+    // The loser is left in place rather than deleted, for the user to resolve.
+    expect(await readdir(old)).toContain('clash.json')
   })
 })

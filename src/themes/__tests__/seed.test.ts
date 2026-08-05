@@ -41,7 +41,7 @@ beforeEach(() => {
   // CLAUDE_CONFIG_DIR is what getClaudeConfigHomeDir reads, and it is memoized
   // on that variable — so pointing it at a temp directory genuinely isolates
   // the writes rather than just appearing to.
-  tempHome = mkdtempSync(join(tmpdir(), 'cct-seed-'))
+  tempHome = mkdtempSync(join(tmpdir(), 'ccs-seed-'))
   process.env.CLAUDE_CONFIG_DIR = tempHome
 })
 
@@ -56,8 +56,8 @@ async function seed() {
   return await seedStarterThemes()
 }
 
-function cctDir(): string {
-  return join(tempHome, 'cct')
+function ccsDir(): string {
+  return join(tempHome, 'ccs')
 }
 
 describe('seedStarterThemes', () => {
@@ -68,7 +68,7 @@ describe('seedStarterThemes', () => {
     expect(result.written.sort()).toEqual(starterThemeNames().sort())
 
     for (const name of starterThemeNames()) {
-      const file = join(cctDir(), `${name}.json`)
+      const file = join(ccsDir(), `${name}.json`)
       expect(existsSync(file)).toBe(true)
       // Parseable and recognisably a theme, not just bytes on disk.
       const parsed = JSON.parse(readFileSync(file, 'utf8'))
@@ -86,7 +86,7 @@ describe('seedStarterThemes', () => {
   test('does not resurrect a starter the user deleted', async () => {
     await seed()
 
-    const matrix = join(cctDir(), 'matrix.json')
+    const matrix = join(ccsDir(), 'matrix.json')
     rmSync(matrix)
 
     const after = await seed()
@@ -96,8 +96,8 @@ describe('seedStarterThemes', () => {
   })
 
   test('never overwrites a file that is already there', async () => {
-    mkdirSync(cctDir(), { recursive: true })
-    const matrix = join(cctDir(), 'matrix.json')
+    mkdirSync(ccsDir(), { recursive: true })
+    const matrix = join(ccsDir(), 'matrix.json')
     writeFileSync(matrix, '{"mine":true}', 'utf8')
 
     const result = await seed()
@@ -105,13 +105,13 @@ describe('seedStarterThemes', () => {
     expect(readFileSync(matrix, 'utf8')).toBe('{"mine":true}')
     expect(result.written).not.toContain('matrix')
     // Still accounted for, so the next run does not try again and clobber it.
-    expect(readFileSync(join(cctDir(), '.seeded'), 'utf8')).toContain('matrix')
+    expect(readFileSync(join(ccsDir(), '.seeded'), 'utf8')).toContain('matrix')
   })
 
   test('creates the themes directory when it does not exist', async () => {
-    expect(existsSync(cctDir())).toBe(false)
+    expect(existsSync(ccsDir())).toBe(false)
     await seed()
-    expect(existsSync(cctDir())).toBe(true)
+    expect(existsSync(ccsDir())).toBe(true)
   })
 })
 
@@ -120,7 +120,7 @@ describe('restoreStarterTheme', () => {
     const { restoreStarterTheme } = await import('../seed.js')
     await seed()
 
-    const matrix = join(cctDir(), 'matrix.json')
+    const matrix = join(ccsDir(), 'matrix.json')
     rmSync(matrix)
 
     expect(await restoreStarterTheme('matrix')).toBe(true)
@@ -136,7 +136,7 @@ describe('restoreStarterTheme', () => {
     const { restoreStarterTheme } = await import('../seed.js')
     await seed()
 
-    const matrix = join(cctDir(), 'matrix.json')
+    const matrix = join(ccsDir(), 'matrix.json')
     writeFileSync(matrix, '{"edited":true}', 'utf8')
 
     expect(await restoreStarterTheme('matrix')).toBe(false)

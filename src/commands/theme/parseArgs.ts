@@ -104,7 +104,7 @@ export function parseThemeArgs(args: string): ParsedThemeCommand {
         return {
           kind: 'error',
           message:
-            'Name the theme to restore, for example: /theme restore matrix — this brings back a theme that ships with cct.',
+            'Name the theme to restore, for example: /theme restore matrix — this brings back a theme that ships with ccs.',
         }
       }
       return { kind: 'restore', name: rest }
@@ -112,7 +112,7 @@ export function parseThemeArgs(args: string): ParsedThemeCommand {
     default:
       return {
         kind: 'error',
-        message: `Unknown option "${subCmd}". Use "/theme" to pick one, "/theme create <description>" to generate one, "/theme export <name>" to copy one for editing, or "/theme delete <name>" to remove one. A theme that ships with cct comes back with "/theme restore <name>".`,
+        message: `Unknown option "${subCmd}". Use "/theme" to pick one, "/theme create <description>" to generate one, "/theme export <name>" to copy one for editing, or "/theme delete <name>" to remove one. A theme that ships with ccs comes back with "/theme restore <name>".`,
       }
   }
 }

@@ -5,7 +5,7 @@
  * Both this fork and official CC watch ~/.claude/themes. The formats differ,
  * so each picker used to list files it could not actually render — official
  * even listed our editor-autocomplete `.schema.json` as a theme. Everything
- * we write now lives in ~/.claude/cct; this moves our-format files
+ * we write now lives in ~/.claude/ccs; this moves our-format files
  * there once, leaves official-format files where official expects them, and
  * removes our schema file from the shared directory.
  *
@@ -35,11 +35,12 @@ import { errorMessage, isENOENT } from '../utils/errors.js'
 import { jsonParse } from '../utils/slowOperations.js'
 import { THEME_SCHEMA_FILENAME } from './jsonSchema.js'
 import {
-  getCctThemesDir,
+  getCcsThemesDir,
   getOfficialThemesDir,
-  LEGACY_CCT_THEMES_DIRNAME,
+  LEGACY_THEME_DIRNAMES,
 } from './loader.js'
 import { isOurThemeShape } from './schema.js'
+import { SEED_RECORD_FILENAME } from './seed.js'
 
 export type MigrationResult = {
   moved: string[]
@@ -57,11 +58,12 @@ function isEXDEV(error: unknown): boolean {
 }
 
 /**
- * Moves themes out of ~/.claude/cc-themes, the name this directory had before
- * it became ~/.claude/cct.
+ * Moves themes out of one of the names this directory used to have.
  *
  * Everything in there was written by us, so unlike the official sweep there is
- * no shape check — every .json moves. The schema file is not moved because it
+ * no shape check — every .json moves, and so does the extensionless `.seeded`
+ * record, without which a starter theme the user deleted before the rename
+ * would come back on the next launch. The schema file is not moved because it
  * is regenerated on every load; it is deleted so the empty directory can go
  * too, and a directory that still has anything in it is simply left alone.
  *
@@ -69,11 +71,12 @@ function isEXDEV(error: unknown): boolean {
  * name that already exists in the new directory is never clobbered.
  */
 async function adoptLegacyDirectory(
-  cctDir: string,
+  legacyName: string,
+  ccsDir: string,
   result: MigrationResult,
 ): Promise<void> {
-  const legacyDir = join(getClaudeConfigHomeDir(), LEGACY_CCT_THEMES_DIRNAME)
-  if (legacyDir === cctDir) return
+  const legacyDir = join(getClaudeConfigHomeDir(), legacyName)
+  if (legacyDir === ccsDir) return
 
   let entries: string[]
   try {
@@ -88,14 +91,16 @@ async function adoptLegacyDirectory(
   }
 
   for (const file of entries.filter(
-    e => e.endsWith('.json') && e !== THEME_SCHEMA_FILENAME,
+    e =>
+      (e.endsWith('.json') || e === SEED_RECORD_FILENAME) &&
+      e !== THEME_SCHEMA_FILENAME,
   )) {
     const source = join(legacyDir, file)
-    const target = join(cctDir, file)
+    const target = join(ccsDir, file)
 
     try {
       await stat(target)
-      result.skipped.push({ file, reason: `already exists in ${cctDir}` })
+      result.skipped.push({ file, reason: `already exists in ${ccsDir}` })
       continue
     } catch {
       // Missing target is the normal case.
@@ -136,7 +141,7 @@ export async function migrateLegacyThemes(): Promise<MigrationResult> {
     skipped: [],
     schemaRemoved: false,
   }
-  const ccDir = getCctThemesDir()
+  const ccDir = getCcsThemesDir()
   const officialDir = getOfficialThemesDir()
 
   // Always ensure our directory exists: the watcher skips missing dirs and
@@ -151,11 +156,15 @@ export async function migrateLegacyThemes(): Promise<MigrationResult> {
     // Continue: individual moves below will fail and be recorded.
   }
 
-  // Our own directory was renamed cc-themes → cct. Do this BEFORE the sweep
-  // below, so a theme that has been sitting in the old directory since before
+  // Our own directory has been renamed twice: cc-themes → cct → ccs. Drain the
+  // old names newest-first, so if two of them somehow hold the same filename
+  // the more recent copy is the one that survives. Do this BEFORE the sweep
+  // below, so a theme that has been sitting in an old directory since before
   // the rename ends up in one place rather than racing the official sweep for
   // the same filename.
-  await adoptLegacyDirectory(ccDir, result)
+  for (const legacyName of LEGACY_THEME_DIRNAMES) {
+    await adoptLegacyDirectory(legacyName, ccDir, result)
+  }
 
   let entries: string[]
   try {

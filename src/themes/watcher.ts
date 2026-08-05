@@ -19,7 +19,7 @@ import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'
 import { createSignal } from '../utils/signal.js'
 import {
-  getCctThemesDir,
+  getCcsThemesDir,
   getOfficialThemesDir,
   loadUserThemes,
   type ThemeLoadResult,
@@ -74,7 +74,7 @@ function scheduleReload(): void {
 }
 
 /**
- * Starts watching both theme directories — ours (~/.claude/cct, always
+ * Starts watching both theme directories — ours (~/.claude/ccs, always
  * created by migrateLegacyThemes before this runs) and official's
  * (~/.claude/themes, watched so an edit made through official Claude Code
  * shows up here live too). Directories that don't exist are skipped; noticing
@@ -84,7 +84,7 @@ function scheduleReload(): void {
 export async function initializeThemeWatcher(): Promise<void> {
   if (initialized || disposed) return
 
-  const candidates = [getCctThemesDir(), getOfficialThemesDir()]
+  const candidates = [getCcsThemesDir(), getOfficialThemesDir()]
   const dirs: string[] = []
   for (const dir of candidates) {
     try {

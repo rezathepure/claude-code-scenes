@@ -31,7 +31,7 @@ wrote into it.
 
 ```sh
 npm i -g claude-code-scenes
-cct
+ccs
 ```
 
 Then `/theme` to pick one, or `/theme create "a vibe"` to design your own.
@@ -47,7 +47,7 @@ Then `/theme` to pick one, or `/theme create "a vibe"` to design your own.
 | **sakura** · petals | A cherry-blossom night. Sakura pink leads, honey pays the bills. |
 | **winter** · snowfall | Snow past a lantern-lit yard. Icy blue leads, one warm ember. |
 
-They are written to `~/.claude/cct/` the first time you run it, as ordinary
+They are written to `~/.claude/ccs/` the first time you run it, as ordinary
 files. Edit one in place and it hot-reloads. Delete one and it stays deleted.
 
 ## Designing one

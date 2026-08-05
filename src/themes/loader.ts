@@ -69,17 +69,22 @@ export function getOfficialThemesDir(): string {
  * Our directory: everything this fork writes (generated themes, exports, the
  * editor-autocomplete schema) lives here, so official's picker never sees our
  * internals and vice versa. Created at startup by migrateLegacyThemes, which
- * also moves anything left in the older ~/.claude/cc-themes.
+ * also moves anything left in the directories this one used to be called.
  */
-export function getCctThemesDir(): string {
-  return join(getClaudeConfigHomeDir(), CCT_THEMES_DIRNAME)
+export function getCcsThemesDir(): string {
+  return join(getClaudeConfigHomeDir(), CCS_THEMES_DIRNAME)
 }
 
 /** Directory name under ~/.claude. Shared with the migration. */
-export const CCT_THEMES_DIRNAME = 'cct'
+export const CCS_THEMES_DIRNAME = 'ccs'
 
-/** Where our themes used to live, before the rename to cct. */
-export const LEGACY_CCT_THEMES_DIRNAME = 'cc-themes'
+/**
+ * Names this directory has had before, newest first. Each rename tracked the
+ * command's own name — `cc-themes`, then `cct` for claude-code-themes, now
+ * `ccs` for claude-code-scenes — and every one of them may still be sitting in
+ * somebody's ~/.claude, so the migration keeps draining all of them.
+ */
+export const LEGACY_THEME_DIRNAMES = ['cct', 'cc-themes'] as const
 
 /**
  * Fills in every slot the author left out from the built-in theme for their
@@ -291,7 +296,7 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
       // fs). Load it in place; origin is the directory it lives in, so the
       // delete-refusal message stays literally true.
       logForDebugging(
-        `[themes] ${file} in ${officialDir} is a cct theme file — it belongs in ${getCctThemesDir()}`,
+        `[themes] ${file} in ${officialDir} is a ccs theme file — it belongs in ${getCcsThemesDir()}`,
       )
       const { theme, warnings: w } = loadThemeFromText(name, text, 'official')
       warnings.push(...w)
@@ -305,7 +310,7 @@ export async function loadUserThemes(): Promise<ThemeLoadResult> {
   }
 
   // ── Our directory ──
-  const ccDir = getCctThemesDir()
+  const ccDir = getCcsThemesDir()
   let ccEntries: string[] | null = null
   try {
     ccEntries = await readdir(ccDir)

@@ -42,7 +42,7 @@ const TWO_HUNDRED_K = 200_000
 let savedConfigDir: string | undefined
 beforeAll(() => {
   savedConfigDir = process.env.CLAUDE_CONFIG_DIR
-  process.env.CLAUDE_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'cct-ctx-'))
+  process.env.CLAUDE_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'ccs-ctx-'))
 })
 afterAll(() => {
   if (savedConfigDir === undefined) {

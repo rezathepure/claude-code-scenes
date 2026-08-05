@@ -48,7 +48,7 @@ describe('canDeleteTheme', () => {
   })
 
   test('allows a starter theme, which is a real file like any other', () => {
-    // matrix ships in the package but is seeded into ~/.claude/cct, so
+    // matrix ships in the package but is seeded into ~/.claude/ccs, so
     // deleting it unlinks a file; the seed record is what stops it being
     // written back on the next launch.
     expect(canDeleteTheme('matrix')).toEqual({ deletable: true })
@@ -72,10 +72,13 @@ describe('canDeleteTheme', () => {
     if (!result.deletable) expect(result.reason).toContain('No theme called')
   })
 
-  test('says cct, never cc-themes', () => {
+  test('never names a directory this one used to be called', () => {
     for (const name of ['dark', 'test-only-nonexistent']) {
       const result = canDeleteTheme(name)
-      if (!result.deletable) expect(result.reason).not.toContain('cc-themes')
+      if (!result.deletable) {
+        expect(result.reason).not.toContain('cc-themes')
+        expect(result.reason).not.toMatch(/\bcct\b/)
+      }
     }
   })
 })
