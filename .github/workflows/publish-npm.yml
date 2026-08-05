@@ -59,6 +59,7 @@ jobs:
 
       - name: Smoke test the artifact
         run: |
+          npm -v # trusted publishing needs npm >= 11.5.1
           node dist/cli-node.js --version
           test -f dist/cli-bun.js
 
@@ -77,11 +78,15 @@ jobs:
             echo "already=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # No NODE_AUTH_TOKEN: this package authenticates by trusted publishing
+      # (OIDC), configured on npmjs.com against this repo and this workflow
+      # file. There is no NPM_TOKEN secret, so setting it anyway wrote an empty
+      # `_authToken=` into .npmrc — enough for npm to fail authentication
+      # before it ever attempts the OIDC exchange. `id-token: write` above is
+      # what makes the exchange possible.
       - name: Publish to npm
         if: steps.published.outputs.already == 'false'
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Generate changelog
         id: changelog

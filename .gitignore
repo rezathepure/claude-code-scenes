@@ -64,5 +64,7 @@ assets/scenes/*.json
 # GitHub Pages build output (bun run site:build)
 _site/
 
-# Personal handoff notes — working doc, not part of the project.
-"to be filled later.md"
+# Personal handoff notes — working doc, not part of the project. No quotes:
+# gitignore takes the pattern literally, so a quoted one matches a filename
+# that contains quote characters and silently ignores nothing.
+to be filled later.md
