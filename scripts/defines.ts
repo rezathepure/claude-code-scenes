@@ -19,11 +19,22 @@ export function getMacroDefines(): Record<string, string> {
   return {
     'MACRO.VERSION': JSON.stringify(pkg.version),
     'MACRO.BUILD_TIME': JSON.stringify(new Date().toISOString()),
-    'MACRO.FEEDBACK_CHANNEL': JSON.stringify(''),
-    'MACRO.ISSUES_EXPLAINER': JSON.stringify(''),
+    // Empty strings here are not harmless: the auto-updater builds its
+    // install command from PACKAGE_URL, so a blank one made it run
+    // `npm view @latest version` against no package at all and render the
+    // user-facing string "npm i -g " with nothing after it. Likewise a blank
+    // ISSUES_EXPLAINER left `/bug` and the error footers rendering empty.
+    'MACRO.FEEDBACK_CHANNEL': JSON.stringify(
+      'https://github.com/rezathepure/claude-code-scenes/issues',
+    ),
+    'MACRO.ISSUES_EXPLAINER': JSON.stringify(
+      'report it at https://github.com/rezathepure/claude-code-scenes/issues',
+    ),
     'MACRO.NATIVE_PACKAGE_URL': JSON.stringify(''),
-    'MACRO.PACKAGE_URL': JSON.stringify(''),
-    'MACRO.VERSION_CHANGELOG': JSON.stringify(''),
+    'MACRO.PACKAGE_URL': JSON.stringify('claude-code-scenes'),
+    'MACRO.VERSION_CHANGELOG': JSON.stringify(
+      'https://github.com/rezathepure/claude-code-scenes/releases',
+    ),
   }
 }
 

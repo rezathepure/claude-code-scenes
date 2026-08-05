@@ -1,31 +1,36 @@
 ---
-name: 功能建议
-about: 提出新功能或改进建议
-title: "feat: "
-labels: ["enhancement"]
-assignees: []
+name: Feature request
+about: Suggest an idea
+title: ''
+labels: enhancement
+assignees: ''
 ---
 
-## 发帖前必读
+## What are you trying to do
 
-- [ ] 我已经搜索过 [现有 Issues](https://github.com/claude-code-best/claude-code/issues)，没有找到重复。
-- [ ] 这是功能建议，不是 Bug 报告或使用问题。
-- [ ] 使用问题请前往 [Discussions](https://github.com/claude-code-best/claude-code/discussions)。
+<!--
+The problem, not the solution. "I want my theme to react to long-running
+commands" tells us more than "add an onCommand hook".
+-->
 
----
+## What you have in mind
 
-## 要解决的问题
+<!-- If you have a specific idea, describe it. If not, that is fine too. -->
 
-<!-- 这个功能解决什么问题？为什么需要它？ -->
+## If this is about the scene grammar
 
-## 建议方案
+Skip if it isn't. The animation vocabulary — motion verbs, glyph catalogues,
+fade modes — is deliberately small, because everything in it has to be
+something the model can use well when designing a theme from a description.
+So it helps to know:
 
-<!-- 描述你建议的实现方式，尽量简洁具体。 -->
+- **What look are you after?** Describe the vibe, as you would to `/theme create`.
+- **Did you try describing it already?** What did you get, and how was it wrong?
 
-## 考虑过的替代方案
+That distinction matters: a look that the grammar can express but the model
+doesn't reach for is a prompt problem, and a look nothing can express is a
+grammar problem. They have different fixes.
 
-<!-- 还有没有想到的其他实现思路？ -->
+## Anything else
 
-## 补充信息
-
-<!-- 截图、草图、参考资料，或其他有助于说明需求的内容。 -->
+<!-- Prior art, screenshots, links to themes elsewhere that do this well. -->

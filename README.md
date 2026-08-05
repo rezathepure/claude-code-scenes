@@ -1,245 +1,108 @@
-# Claude Code Best V5 (CCB)
+<div align="center">
 
-[![GitHub Stars](https://img.shields.io/github/stars/claude-code-best/claude-code?style=flat-square&logo=github&color=yellow)](https://github.com/claude-code-best/claude-code/stargazers)
-[![GitHub Contributors](https://img.shields.io/github/contributors/claude-code-best/claude-code?style=flat-square&color=green)](https://github.com/claude-code-best/claude-code/graphs/contributors)
-[![GitHub Issues](https://img.shields.io/github/issues/claude-code-best/claude-code?style=flat-square&color=orange)](https://github.com/claude-code-best/claude-code/issues)
-[![GitHub License](https://img.shields.io/github/license/claude-code-best/claude-code?style=flat-square)](https://github.com/claude-code-best/claude-code/blob/main/LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/claude-code-best/claude-code?style=flat-square&color=blue)](https://github.com/claude-code-best/claude-code/commits/main)
-[![Bun](https://img.shields.io/badge/runtime-Bun-black?style=flat-square&logo=bun)](https://bun.sh/)
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=flat-square&logo=discord)](https://discord.gg/uApuzJWGKX)
+# claude-code-scenes
 
-> Which Claude do you like? The open source one is the best.
+**Animated themes for the Claude Code terminal.**
+Three ship with it. The rest you design by describing them.
 
-这是 A\ (Anthropic) 官方 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 完整复原的工程化项目。而且, 我们持续跟进并实现了企业版或者需要登陆 Claude 账号才能使用的特性, 并在此基础上扩展了更多好玩的特性， 关闭了所有的外部封控点。我们完全兼容 CC 原有的配置， 你不需要改原始配置文件， Dynamic Workflow、Goal 等功能全都在。
+[Website](https://rezathepure.github.io/claude-code-scenes/) ·
+[Theme format](docs/features/theme-scenes.md) ·
+[Notice & licensing](NOTICE.md)
 
-[Peri Code](https://github.com/KonghaYao/peri)：Claude Code 兼容的 Rust Agent，多年大模型经验匠心制作，国内大模型（DeepSeek/GLM）精调，CPU/内存极致优化，在开发版/树莓派上也能跑 CC 一样的体验。
+</div>
 
-[文档在这里](https://ccb.agent-aura.top/) | [留影文档在这里](./Friends.md) | [Discord 群组，群主在线答疑](https://discord.gg/uApuzJWGKX)
+<div align="center">
+  <img src="assets/scenes/matrix.svg" alt="The matrix theme: green katakana falling in columns down a dark terminal" width="720">
+</div>
 
-| 特性                        | 说明                                                                                                                         | 文档                                                                                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **🎯 Goal 持续驱动**        | `/goal <objective>` 设定目标后，自动跨轮驱动 agent 直至完成；带 token budget、completion/blocked audit、`pause`/`resume`/`continue`/`clear` 子命令，网络中断自动暂停 | 源码 [`commands/goal/`](./src/commands/goal/) · [`services/goal/`](./src/services/goal/)                                                  |
-| **📦 Artifacts（HTML 上传）** | 复刻 Anthropic 官方 Artifacts：模型把 HTML/数据看板/报告上传到公开 URL（7d/30d 自动过期），`/artifacts` 命令集中管理，Cloudflare Worker + R2 完全开源、可自托管 | [8 小时复刻报告](./docs/blog/2026-06-20-cloud-artifacts-8h-recap.md) · [在线 demo](https://cloud-artifacts.claude-code-best.win/30d/c2jfwi3E-y3fTZ1ors-KE.html) |
-| **🧠 Ultracode 多 Agent 编排** | `/ultracode` 注入 workflow 编排手册 + `Workflow` 工具跑确定性 JS 脚本（`agent`/`pipeline`/`parallel`/`phase`）+ `/workflows` 双栏监控面板；支持 journal 重放、token budget、并发 cap | [文档](https://ccb.agent-aura.top/docs/features/workflow-scripts)                                                                         |
-| **Claude 群控技术**         | Pipe IPC 多实例协作：同机 main/sub 自动编排 + LAN 跨机器零配置发现与通讯，`/pipes` 选择面板 + `Shift+↓` 交互 + 消息广播路由 | [Pipe IPC](https://ccb.agent-aura.top/docs/features/uds-inbox) / [LAN](https://ccb.agent-aura.top/docs/features/lan-pipes)                |
-| **ACP 协议一等一支持**      | 支持接入 Zed、Cursor 等 IDE，支持会话恢复、Skills、权限桥接                                                                  | [文档](https://ccb.agent-aura.top/docs/features/acp-zed)                                                                                  |
-| **Remote Control 私有部署** | Docker 自托管远程界面, 可以手机上看 CC                                                                                       | [文档](https://ccb.agent-aura.top/docs/features/remote-control-self-hosting)                                                              |
-| **Langfuse 监控**           | 企业级 Agent 监控, 可以清晰看到每次 agent loop 细节, 可以一键转化为数据集                                                    | [文档](https://ccb.agent-aura.top/docs/features/langfuse-monitoring)                                                                      |
-| **Web Search**              | 内置网页搜索工具, 支持 bing 和 brave 搜索                                                                                    | [文档](https://ccb.agent-aura.top/docs/features/web-browser-tool)                                                                         |
-| **Poor Mode**               | 穷鬼模式，关闭记忆提取和键入建议,大幅度减少并发请求                                                                          | /poor 可以开关                                                                                                                            |
-| **Channels 频道通知**       | MCP 服务器推送外部消息到会话（飞书/Slack/Discord/微信等），`--channels plugin:name@marketplace` 启用                         | [文档](https://ccb.agent-aura.top/docs/features/channels)                                                                                 |
-| **自定义模型供应商**        | OpenAI/Anthropic/Gemini/Grok 兼容  (`/login`)                                                                                          | [文档](https://ccb.agent-aura.top/docs/features/all-features-guide)                                                                        |
-| Voice Mode                  | 语音输入，支持豆包语言输入（`/voice doubao`）                                                                   | [文档](https://ccb.agent-aura.top/docs/features/voice-mode)                                                                               |
-| Computer Use                | 屏幕截图、键鼠控制                                                                                                           | [文档](https://ccb.agent-aura.top/docs/features/computer-use)                                                                             |
-| Chrome Use                  | 浏览器自动化、表单填写、数据抓取                                                                                             | [自托管](https://ccb.agent-aura.top/docs/features/chrome-use-mcp) [原生版](https://ccb.agent-aura.top/docs/features/claude-in-chrome-mcp) |
-| Sentry                      | 企业级错误追踪                                                                                                               | [文档](https://ccb.agent-aura.top/docs/internals/sentry-setup)                                                                            |
-| GrowthBook                  | 企业级特性开关                                                                                                               | [文档](https://ccb.agent-aura.top/docs/internals/growthbook-adapter)                                                                      |
-| /dream 记忆整理             | 自动整理和优化记忆文件                                                                                                       | [文档](https://ccb.agent-aura.top/docs/features/auto-dream)                                                                               |
+---
 
-- 🚀 [想要启动项目](#-快速开始源码版)
-- 🐛 [想要调试项目](#vs-code-调试)
-- 📖 [想要学习项目](#teach-me-学习项目)
+## What this is
 
-## ⚡ 快速开始(安装版)
+A fork of [claude-code-best/claude-code](https://github.com/claude-code-best/claude-code)
+that adds one thing: **animations that paint behind your conversation**, and a
+way to invent new ones by describing what you want.
 
-不用克隆仓库, 从 NPM 下载后, 直接使用
+The animation lives entirely in the theme's JSON file — no code ships for it.
+That is what lets a binary you installed from npm produce an animation nobody
+wrote into it.
+
+## Install
 
 ```sh
-npm i -g claude-code-best
-
-# bun 安装比较多问题, 推荐 npm 装
-# bun  i -g claude-code-best
-# bun pm -g trust claude-code-best @claude-code-best/mcp-chrome-bridge
-
-ccb # 以 nodejs 打开 claude code
-ccb-bun # 以 bun 形态打开
-ccb update # 更新到最新版本
-CLAUDE_BRIDGE_BASE_URL=https://remote-control.claude-code-best.win/ CLAUDE_BRIDGE_OAUTH_TOKEN=test-my-key ccb --remote-control # 我们有自部署的远程控制
+npm i -g claude-code-scenes
+cct
 ```
 
-> **安装/更新失败？** 先 `npm rm -g claude-code-best` 清理旧版本，再 `npm i -g claude-code-best@latest`。仍失败则指定版本号：`npm i -g claude-code-best@<版本号>`
+Then `/theme` to pick one, or `/theme create "a vibe"` to design your own.
 
-## ⚡ 快速开始(源码版)
+> Bring your own API credentials — Anthropic, or any compatible provider via
+> `/login`. This ships no API access and you pay for your own usage.
 
-### ⚙️ 环境要求
+## The three starters
 
-一定要最新版本的 bun 啊, 不然一堆奇奇怪怪的 BUG!!! bun upgrade!!!
+| | |
+|---|---|
+| **matrix** · rain | Phosphor-green terminal. One hue with discipline. |
+| **sakura** · petals | A cherry-blossom night. Sakura pink leads, honey pays the bills. |
+| **winter** · snowfall | Snow past a lantern-lit yard. Icy blue leads, one warm ember. |
 
-- 📦 [Bun](https://bun.sh/) >= 1.3.11
+They are written to `~/.claude/cct/` the first time you run it, as ordinary
+files. Edit one in place and it hot-reloads. Delete one and it stays deleted.
 
-**安装 Bun：**
+## Designing one
 
-```bash
-# Linux 和 macOS
-curl -fsSL https://bun.sh/install | bash
-
-# Windows (PowerShell)
-powershell -c "irm bun.sh/install.ps1 | iex"
+```
+/theme create "cyberpunk thunderstorm"
 ```
 
-**安装后的操作：**
+One generation, then a loop. You get two views of the draft — the backdrop
+animating at full size, and a scripted session exercising about fifteen colour
+slots — and either accepts a change in plain language: *"slower"*, *"add
+drifting embers"*, *"calmer warnings"*. Refinements return a delta, so anything
+you did not mention stays as it was, and you can undo. Nothing is written to
+disk until you keep it.
 
-1. **让当前终端识别 `bun` 命令**
+## Notes
 
-   安装脚本会把 `~/.bun/bin` 写入对应的 shell 配置文件。macOS 默认 zsh 环境通常会看到：
+**Animations need the alternate screen buffer**, which is on by default. If you
+prefer inline rendering, `/tui off` turns it off permanently — themes still
+apply their colours, they just stop moving.
 
-   ```text
-   Added "~/.bun/bin" to $PATH in "~/.zshrc"
-   ```
+**Theme files are meant to be shared, so nothing in one is ever executed.**
+Shader expressions go through a hand-written lexer and parser — no `eval`, no
+`Function` constructor, no property access — under hard caps, with a fuzz test.
+Details in [docs/features/theme-scenes.md](docs/features/theme-scenes.md).
 
-   可以按安装脚本提示重启当前 shell：
+**Install-time behaviour.** `postinstall` downloads a ripgrep binary from
+GitHub releases for the search tools. `CLAUDE_CODE_SKIP_POSTINSTALL=1` skips
+it; `RIPGREP_DOWNLOAD_BASE` points it elsewhere. Chrome integration is opt-in
+via `CLAUDE_CODE_SETUP_CHROME_MCP=1` and does nothing otherwise.
 
-   ```bash
-   exec /bin/zsh
-   ```
+## Building from source
 
-   如果你使用 bash，重新加载 bash 配置：
+Needs [Bun](https://bun.sh) ≥ 1.3.11.
 
-   ```bash
-   source ~/.bashrc
-   ```
-
-   Windows PowerShell 用户关闭并重新打开 PowerShell 即可。
-
-2. **验证 Bun 是否可用**
-
-   ```bash
-   bun --help
-   bun --version
-   ```
-
-3. **如果已经安装过 Bun，更新到最新版本**
-
-   ```bash
-   bun upgrade
-   ```
-
-- ⚙️ 常规的配置 CC 的方式, 各大提供商都有自己的配置方式
-
-### 📍 命令执行位置
-
-- 安装或检查 Bun 的命令可以在任意目录执行：
-  `curl -fsSL https://bun.sh/install | bash`、`bun --help`、`bun --version`、`bun upgrade`
-- 安装本项目依赖、启动开发模式、构建项目时，必须先进入本仓库根目录，也就是包含 `package.json` 的目录。
-
-### 📥 安装
-
-```bash
-cd /path/to/claude-code
+```sh
 bun install
+bun run dev          # run it
+bun run precheck     # typecheck + lint + test
+bun run capture:scenes   # regenerate the demo assets from the engine
 ```
 
-### ▶️ 运行
+## Credits and legal
 
-```bash
-# 开发模式, 看到版本号 888 说明就是对了
-bun run dev
+Not affiliated with, endorsed by, or sponsored by Anthropic. "Claude", "Claude
+Code" and "Anthropic" belong to [Anthropic PBC](https://www.anthropic.com/),
+and all rights in Claude Code and the Claude models are theirs. If you want the
+supported, official tool, use
+[Anthropic's Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-# 构建
-bun run build
-```
+This is a fork of [claude-code-best/claude-code](https://github.com/claude-code-best/claude-code),
+an independent reverse-engineered reproduction that is **not** Anthropic's
+official distribution. The animated-theme work is what this fork adds; it is
+MIT-licensed under [LICENSE-SCENES](LICENSE-SCENES), scoped by explicit path
+list. There is deliberately no repository-wide licence — the reasoning is in
+[NOTICE.md](NOTICE.md), which you should read before forking or redistributing.
 
-构建采用 code splitting 多文件打包（`build.ts`），产物输出到 `dist/` 目录（入口 `dist/cli.js` + 约 450 个 chunk 文件）。
-
-构建出的版本 bun 和 node 都可以启动, 你 publish 到私有源可以直接启动
-
-如果遇到 bug 请直接提一个 issues, 我们优先解决
-
-### 👤 新人配置 /login
-
-首次运行后，在 REPL 中输入 `/login` 命令进入登录配置界面，选择 **Anthropic Compatible** 即可对接第三方 API 兼容服务（无需 Anthropic 官方账号）。
-选择 OpenAI 和 Gemini 对应的栏目都是支持相应协议的
-
-需要填写的字段：
-
-| 📌 字段      | 📝 说明       | 💡 示例                      |
-| ------------ | ------------- | ---------------------------- |
-| Base URL     | API 服务地址  | `https://api.example.com/v1` |
-| API Key      | 认证密钥      | `sk-xxx`                     |
-| Haiku Model  | 快速模型 ID   | `claude-haiku-4-5-20251001`  |
-| Sonnet Model | 均衡模型 ID   | `claude-sonnet-4-6`          |
-| Opus Model   | 高性能模型 ID | `claude-opus-4-6`            |
-
-- ⌨️ **Tab / Shift+Tab** 切换字段，**Enter** 确认并跳到下一个，最后一个字段按 Enter 保存
-
-> ℹ️ 支持所有 Anthropic API 兼容服务（如 OpenRouter、AWS Bedrock 代理等），只要接口兼容 Messages API 即可。
-
-## Feature Flags
-
-所有功能开关通过 `FEATURE_<FLAG_NAME>=1` 环境变量启用，例如：
-
-```bash
-FEATURE_BUDDY=1 FEATURE_FORK_SUBAGENT=1 bun run dev
-```
-
-各 Feature 的详细说明见 [`docs/features/`](docs/features/) 目录，欢迎投稿补充。
-
-## VS Code 调试
-
-TUI (REPL) 模式需要真实终端，无法直接通过 VS Code launch 启动调试。使用 **attach 模式**：
-
-### 步骤
-
-1. **终端启动 inspect 服务**：
-
-   ```bash
-   bun run dev:inspect
-   ```
-
-   会输出类似 `ws://localhost:8888/xxxxxxxx` 的地址。
-2. **VS Code 附着调试器**：
-
-   - 在 `src/` 文件中打断点
-   - F5 → 选择 **"Attach to Bun (TUI debug)"**
-
-## Teach Me 学习项目
-
-我们新加了一个 teach-me skills, 通过问答式引导帮你理解这个项目的任何模块。(调整 [sigma skill 而来](https://github.com/sanyuan0704/sanyuan-skills))
-
-```bash
-# 在 REPL 中直接输入
-/teach-me Claude Code 架构
-/teach-me React Ink 终端渲染 --level beginner
-/teach-me Tool 系统 --resume
-```
-
-### 它能做什么
-
-- **诊断水平** — 自动评估你对相关概念的掌握程度，跳过已知的、聚焦薄弱的
-- **构建学习路径** — 将主题拆解为 5-15 个原子概念，按依赖排序逐步推进
-- **苏格拉底式提问** — 用选项引导思考，而非直接给答案
-- **错误概念追踪** — 发现并纠正深层误解
-- **断点续学** — `--resume` 从上次进度继续
-
-### 学习记录
-
-学习进度保存在 `.claude/skills/teach-me/` 目录下，支持跨主题学习者档案。
-
-## 相关文档及网站
-
-- **在线文档（Mintlify）**: [ccb.agent-aura.top](https://ccb.agent-aura.top/) — 文档源码位于 [`docs/`](docs/) 目录，欢迎投稿 PR
-- **DeepWiki**: [https://deepwiki.com/claude-code-best/claude-code](https://deepwiki.com/claude-code-best/claude-code)
-
-## Contributors
-
-<a href="https://github.com/claude-code-best/claude-code/graphs/contributors">
-  <img src="contributors.svg" alt="Contributors" />
-</a>
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=claude-code-best%2Fclaude-code&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=claude-code-best/claude-code&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=claude-code-best/claude-code&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=claude-code-best/claude-code&type=date&legend=top-left" />
- </picture>
-</a>
-
-## 致谢
-
-- [doubaoime-asr](https://github.com/starccy/doubaoime-asr) — 豆包 ASR 语音识别 SDK，为 Voice Mode 提供无需 Anthropic OAuth 的语音输入方案
-
-## 许可证
-
-本项目仅供学习研究用途。Claude Code 的所有权利归 [Anthropic](https://www.anthropic.com/) 所有。
+Provided as-is, with no warranty.

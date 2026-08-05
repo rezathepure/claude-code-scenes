@@ -1,5 +1,5 @@
 /**
- * `ccb update` — Check and install the latest version of claude-code-best.
+ * `cct update` — Check and install the latest version of this package.
  *
  * Detection strategy:
  *  1. If `bun` is available and the current installation was done via bun → use `bun update -g`
@@ -16,7 +16,13 @@ import { execFileNoThrowWithCwd } from '../utils/execFileNoThrow.js'
 import { gracefulShutdown } from '../utils/gracefulShutdown.js'
 import { writeToStdout } from '../utils/process.js'
 
-const PACKAGE_NAME = 'claude-code-best'
+/**
+ * Must be THIS package, not the upstream one it was forked from. Left as
+ * `claude-code-best` after the rename, `update` would have run
+ * `npm install -g claude-code-best@latest` and replaced the user's install
+ * with a different CLI — an update that uninstalls the thing being updated.
+ */
+const PACKAGE_NAME = 'claude-code-scenes'
 
 function getCurrentVersion(): string {
   // Read version from the nearest package.json (walks up from dist root)

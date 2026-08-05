@@ -59,3 +59,10 @@ jobs:
 
       - name: Build
         run: bun run build:vite
+
+      # A build that succeeds and a binary that runs are different claims, and
+      # only the second one matters to a user. This is the artifact `npm
+      # publish` ships, so a bundler-shaped failure has to fail here rather
+      # than on someone's laptop after install.
+      - name: Smoke test the built CLI
+        run: node dist/cli-node.js --version

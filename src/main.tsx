@@ -5305,7 +5305,7 @@ async function run(): Promise<CommanderCommand> {
   // claude update — update cct to the latest version via npm or bun
   program
     .command('update')
-    .description('Update claude-code-best (cct) to the latest version')
+    .description('Update claude-code-scenes (cct) to the latest version')
     .action(async () => {
       const { updateCCB } = await import('./cli/updateCCB.js');
       await updateCCB();

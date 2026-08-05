@@ -1,52 +1,47 @@
 ---
-name: Bug 报告
-about: 报告一个可复现的 bug
-title: "bug: "
-labels: ["bug"]
-assignees: []
+name: Bug report
+about: Something does not work the way it should
+title: ''
+labels: bug
+assignees: ''
 ---
 
-## 发帖前必读
+## What happened
 
-- [ ] 我已经搜索过 [现有 Issues](https://github.com/claude-code-best/claude-code/issues)，没有找到重复。
-- [ ] 我使用的是 **最新版本**（`bun run build` 或最新 release）。
-- [ ] 我已经阅读过 [README](https://github.com/claude-code-best/claude-code) 和相关文档。
+<!-- What you did, and what happened instead of what you expected. -->
 
-**未完成以上检查的 Issue 将被直接关闭。**
-
----
-
-## 运行环境
-
-| 项目| 值|
-|---|---|
-| 操作系统| 例如 macOS 15.4、Ubuntu 24.04|
-| Bun 版本| 例如 `bun --version` 的输出|
-| Claude Code 版本| 例如 `2.4.3` 或 commit hash|
-| 安装方式| `bun run build` / npm / 其他|
-| 模型| 例如 claude-sonnet-4-6、claude-opus-4-7|
-
-## 复现步骤
+## Steps to reproduce
 
 1.
 2.
 3.
 
-## 期望行为
+## If it is a theme or animation problem
 
-<!-- 应该发生什么？ -->
+Skip this section if it isn't.
 
-## 实际行为
+- **Theme name:**
+- **Is the animation visible at all?** (matrix, sakura and winter animate; a
+  theme with `"scene": {"kind": "none"}` is meant to be still)
+- **Does `/tui status` say enabled?** Scenes only paint in the alternate
+  screen buffer. It is on by default; `/tui on` turns it back on, and the
+  change takes effect on the next start.
+- **Attach the theme file** if you designed it — `~/.claude/cct/<name>.json`.
 
-<!-- 实际发生了什么？如有必要可附截图。 -->
+## Environment
 
-## 相关日志
+| | |
+|---|---|
+| Version (`cct --version`) | |
+| Install method | npm / built from source |
+| OS | |
+| Terminal | e.g. iTerm2, Windows Terminal, Ghostty, tmux |
+| Node version | |
+| Model provider | Anthropic / OpenAI-compatible / Gemini / other |
 
-<!-- 粘贴终端输出或错误信息，请使用 triple backticks 代码块。 -->
+## Logs or screenshots
 
-```text
-```
-
-## 补充信息
-
-<!-- 其他上下文 — 配置、环境变量、尝试过的 workaround 等。 -->
+<!--
+For an animation problem a screen recording is worth far more than a
+description. For a crash, paste the full error.
+-->

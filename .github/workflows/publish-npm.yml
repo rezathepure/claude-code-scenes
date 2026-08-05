@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "版本号 (例如: v1.9.0)"
+        description: "Tag to publish (e.g. v0.1.0)"
         required: true
         type: string
 
@@ -41,6 +41,26 @@ jobs:
 
       - name: Run tests
         run: bun test
+
+      # Build and RUN the artifact before publishing it.
+      #
+      # `prepublishOnly` builds during `npm publish`, which meant the thing
+      # users download had never been executed by anyone: the publish build
+      # (Vite) produces a different dist/ layout from the one developed
+      # against (`bun run build`, Bun), and `npm pack` does not trigger
+      # `prepublishOnly` — so even inspecting a packed tarball inspected the
+      # wrong build. A bundler error would have shipped and only surfaced on
+      # a user's machine.
+      #
+      # `prepublishOnly` still runs and rebuilds; that is deterministic from
+      # the same source, and keeps a manual `npm publish` safe.
+      - name: Build publish artifact
+        run: bun run build:vite
+
+      - name: Smoke test the artifact
+        run: |
+          node dist/cli-node.js --version
+          test -f dist/cli-bun.js
 
       - name: Publish to npm
         run: npm publish --provenance --access public

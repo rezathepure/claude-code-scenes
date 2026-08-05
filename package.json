@@ -1,9 +1,11 @@
 {
   "name": "claude-code-scenes",
-  "version": "2.8.4",
+  "version": "0.1.0",
   "description": "Animated themes for the Claude Code terminal — describe a vibe and the model designs the animation",
   "type": "module",
   "author": "Alireza Eftekhari (https://github.com/rezathepure)",
+  "license": "SEE LICENSE IN LICENSE-SCENES",
+  "upstreamBase": "claude-code-best@2.8.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rezathepure/claude-code-scenes.git"
@@ -28,6 +30,7 @@
     "ansi"
   ],
   "engines": {
+    "node": ">=20.0.0",
     "bun": ">=1.3.0"
   },
   "bin": {
@@ -42,6 +45,9 @@
   ],
   "files": [
     "dist",
+    "!dist/vendor/ripgrep/**",
+    "NOTICE.md",
+    "LICENSE-SCENES",
     "scripts/postinstall.cjs",
     "scripts/run-parallel.mjs",
     "scripts/setup-chrome-mcp.mjs"
@@ -80,6 +86,7 @@
     "@agentclientprotocol/sdk": "^0.19.0",
     "@claude-code-best/mcp-chrome-bridge": "^3.0.1",
     "highlight.js": "^11.11.1",
+    "undici": "^7.25.0",
     "ws": "^8.20.0"
   },
   "devDependencies": {
@@ -207,7 +214,6 @@
     "turndown": "^7.2.4",
     "type-fest": "^5.6.0",
     "typescript": "^6.0.3",
-    "undici": "^7.25.0",
     "url-handler-napi": "workspace:*",
     "usehooks-ts": "^3.1.1",
     "vite": "^8.0.8",
