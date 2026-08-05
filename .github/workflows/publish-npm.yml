@@ -62,7 +62,23 @@ jobs:
           node dist/cli-node.js --version
           test -f dist/cli-bun.js
 
+      # npm rejects republishing a version that already exists, so a tag for a
+      # version published by hand would fail the whole run and leave a red mark
+      # on a release that actually succeeded. Skip instead — the changelog and
+      # GitHub Release below still run, which is the part that was missing.
+      - name: Check whether this version is already on npm
+        id: published
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "claude-code-scenes@${VERSION}" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "claude-code-scenes@${VERSION} is already published — skipping publish."
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to npm
+        if: steps.published.outputs.already == 'false'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
