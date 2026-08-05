@@ -4,7 +4,14 @@
  * Priority (highest first):
  *   1. WEB_SEARCH_ADAPTER environment variable (explicit override)
  *   2. settings.webSearchAdapter (user-configurable via /web-tools)
- *   3. Default: tavily
+ *   3. Default: api — the user's own provider
+ *
+ * The default used to be `tavily`, which pointed at a Tavily proxy run by the
+ * upstream project. Every unconfigured search therefore left the user's query
+ * with a third party they had never heard of and could not see. `api` uses
+ * the provider the user has already authenticated against, which is the only
+ * default that sends their queries somewhere they chose. Tavily is still one
+ * `/web-tools` away, and now requires its endpoint to be named explicitly.
  */
 
 import { getSettings_DEPRECATED } from 'src/utils/settings/settings.js'
@@ -46,7 +53,7 @@ export function createAdapter(): WebSearchAdapter {
           settingsAdapter === 'exa' ||
           settingsAdapter === 'tavily'
         ? settingsAdapter
-        : 'tavily' // 3. Default
+        : 'api' // 3. Default
 
   if (cachedAdapter && cachedAdapterKey === adapterKey) return cachedAdapter
 
@@ -64,8 +71,10 @@ export function createAdapter(): WebSearchAdapter {
       cachedAdapter = new ExaSearchAdapter()
       break
     case 'tavily':
-    default:
       cachedAdapter = new TavilySearchAdapter()
+      break
+    default:
+      cachedAdapter = new ApiSearchAdapter()
       break
   }
 

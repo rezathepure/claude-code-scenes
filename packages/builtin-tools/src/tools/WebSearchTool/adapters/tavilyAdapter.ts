@@ -1,7 +1,11 @@
 /**
- * Tavily-based search adapter — calls the Tavily Search API
- * (https://tavily.claude-code-best.win) and maps results to
- * the unified SearchResult format.
+ * Tavily-based search adapter — calls a Tavily Search API endpoint and maps
+ * results to the unified SearchResult format.
+ *
+ * The endpoint must be configured; there is deliberately no default. This
+ * used to fall back to a proxy run by the upstream project, so choosing
+ * "tavily" silently sent every query to a third party. Naming your own
+ * endpoint is now part of choosing the adapter.
  */
 
 import axios from 'axios'
@@ -9,7 +13,6 @@ import { AbortError } from 'src/utils/errors.js'
 import { getSettings_DEPRECATED } from 'src/utils/settings/settings.js'
 import type { SearchResult, SearchOptions, WebSearchAdapter } from './types.js'
 
-const DEFAULT_TAVILY_SEARCH_URL = 'https://tavily.claude-code-best.win/search'
 const FETCH_TIMEOUT_MS = 30_000
 
 interface TavilySearchHit {
@@ -43,7 +46,14 @@ export class TavilySearchAdapter implements WebSearchAdapter {
     const settings = getSettings_DEPRECATED() as Record<string, unknown> & {
       tavilyEndpointUrl?: string
     }
-    const baseUrl = settings.tavilyEndpointUrl || DEFAULT_TAVILY_SEARCH_URL
+    const baseUrl = settings.tavilyEndpointUrl
+    if (!baseUrl) {
+      throw new Error(
+        'The Tavily search adapter has no endpoint configured. Set one with ' +
+          '/web-tools, or switch to another adapter — "api" uses the provider ' +
+          'you are already signed in to.',
+      )
+    }
     // Ensure the URL ends with /search (same pattern as fetchContentWithTavily for /extract)
     const searchUrl = baseUrl.endsWith('/search')
       ? baseUrl

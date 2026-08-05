@@ -213,9 +213,15 @@ ${DESCRIPTION}`
   ) {
     const start = Date.now()
 
-    // Select backend: settings.webFetchAdapter → default 'tavily'
+    // Select backend: settings.webFetchAdapter → default 'http'.
+    //
+    // The default was 'tavily', which routed every fetch through a proxy run
+    // by the upstream project. Fetching the URL directly is what the user
+    // asked for; sending it to a third party first is not a default anyone
+    // opted into. Tavily remains available via /web-tools, and now needs its
+    // endpoint configured explicitly.
     const settings = getSettings_DEPRECATED()
-    const backend = settings.webFetchAdapter ?? 'tavily'
+    const backend = settings.webFetchAdapter ?? 'http'
 
     // Tavily path: /extract returns Markdown directly — skip turndown + queryHaiku
     if (backend === 'tavily') {

@@ -17,8 +17,6 @@ import { asSystemPrompt } from 'src/utils/systemPromptType.js'
 import { isPreapprovedHost } from './preapproved.js'
 import { makeSecondaryModelPrompt } from './prompt.js'
 
-const DEFAULT_TAVILY_EXTRACT_URL = 'https://tavily.claude-code-best.win/extract'
-
 // Custom error class for egress proxy blocks
 class EgressBlockedError extends Error {
   constructor(public readonly domain: string) {
@@ -482,7 +480,13 @@ export async function fetchContentWithTavily(
   const settings = getSettings_DEPRECATED() as Record<string, unknown> & {
     tavilyEndpointUrl?: string
   }
-  const baseUrl = settings.tavilyEndpointUrl || DEFAULT_TAVILY_EXTRACT_URL
+  const baseUrl = settings.tavilyEndpointUrl
+  if (!baseUrl) {
+    throw new Error(
+      'The Tavily fetch backend has no endpoint configured. Set one with ' +
+        '/web-tools, or switch the backend to "http" to fetch URLs directly.',
+    )
+  }
   // Derive extract URL from the base Tavily endpoint
   const extractUrl = baseUrl.endsWith('/search')
     ? baseUrl.replace(/\/search$/, '/extract')

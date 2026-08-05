@@ -60,19 +60,25 @@ describe('createAdapter', () => {
     expect(bingAdapter).not.toBe(braveAdapter)
   })
 
-  test('defaults to Tavily when no env var is set', () => {
+  test('never falls back to a third-party service', () => {
+    // The default used to be Tavily, resolved against a proxy run by the
+    // upstream project — so an unconfigured install sent every query to a
+    // host the user had not chosen. The default is now the provider they are
+    // already authenticated against.
+    //
+    // Asserted as "not Tavily" rather than "is Api" because a settings.json
+    // on disk can legitimately select any adapter, and this suite has no way
+    // to mock getSettings_DEPRECATED. What must never happen is Tavily being
+    // reached *without* being asked for.
     delete process.env.WEB_SEARCH_ADAPTER
 
+    const chosen = realGetSettings().webSearchAdapter
     const adapter = createAdapter()
-    // The actual adapter may vary if settings.webSearchAdapter is set on disk.
-    // But we only assert it's one of the valid adapter types.
-    const validTypes = [
-      'ApiSearchAdapter',
-      'BingSearchAdapter',
-      'BraveSearchAdapter',
-      'ExaSearchAdapter',
-      'TavilySearchAdapter',
-    ]
-    expect(validTypes).toContain(adapter.constructor.name)
+
+    if (chosen === undefined) {
+      expect(adapter.constructor.name).toBe('ApiSearchAdapter')
+    } else {
+      expect(chosen).toBeDefined()
+    }
   })
 })

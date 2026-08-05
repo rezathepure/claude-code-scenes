@@ -160,9 +160,11 @@ function getConfigFields(adapter: AdapterMeta): ConfigField[] {
       fields.push({
         key: 'tavilyEndpointUrl',
         label: 'Endpoint URL',
-        placeholder: 'https://tavily.claude-code-best.win',
+        placeholder: 'https://api.tavily.com',
         maskInput: false,
-        getValue: s => s.tavilyEndpointUrl ?? 'https://tavily.claude-code-best.win',
+        // No fallback: an unset endpoint must read as unset, because the
+        // adapter now refuses to run rather than reaching for a default.
+        getValue: s => s.tavilyEndpointUrl ?? '',
         setValue: (s, v) => ({ ...s, tavilyEndpointUrl: v || undefined }),
       });
       break;
@@ -477,8 +479,10 @@ function WebToolsPanel({
   const [view, setView] = useState<ViewState>({ kind: 'main' });
 
   const settings = getSettings_DEPRECATED() as unknown as SettingsJson;
-  const currentSearch = settings.webSearchAdapter ?? 'tavily';
-  const currentFetch = settings.webFetchAdapter ?? 'tavily';
+  // Must match the runtime defaults in WebSearchTool/adapters/index.ts and
+  // WebFetchTool.ts, or the panel shows a selection the tools do not use.
+  const currentSearch = settings.webSearchAdapter ?? 'api';
+  const currentFetch = settings.webFetchAdapter ?? 'http';
 
   const insideModal = useIsInsideModal();
   const { rows } = useTerminalSize();
