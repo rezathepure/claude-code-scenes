@@ -37,7 +37,19 @@ try {
 
 const RG_VERSION = '15.0.1'
 const DEFAULT_RELEASE_BASE = `https://github.com/microsoft/ripgrep-prebuilt/releases/download/v${RG_VERSION}`
-const MIRROR_RELEASE_BASE = `https://ghproxy.net/https://github.com/microsoft/ripgrep-prebuilt/releases/download/v${RG_VERSION}`
+/**
+ * There is deliberately no automatic mirror.
+ *
+ * This script downloads an executable and chmods it 0755, and nothing here
+ * verifies a checksum. Falling back to a third-party proxy on a transient
+ * GitHub error therefore means silently running a binary from a host the user
+ * never chose, on a path they cannot see. A failed download is recoverable; a
+ * substituted binary is not.
+ *
+ * Anyone who genuinely needs a mirror — behind the GFW, or on an air-gapped
+ * network with an internal artefact store — sets RIPGREP_DOWNLOAD_BASE and
+ * makes that choice explicitly.
+ */
 const RELEASE_BASE = (
   process.env.RIPGREP_DOWNLOAD_BASE ?? DEFAULT_RELEASE_BASE
 ).replace(/\/$/, '')
@@ -326,10 +338,9 @@ async function downloadAndExtract() {
 
   const extractedBinary = process.platform === 'win32' ? 'rg.exe' : 'rg'
 
+  // Exactly one source: whatever RELEASE_BASE resolved to. See its definition
+  // for why there is no automatic fallback to a mirror.
   const mirrors = [RELEASE_BASE]
-  if (RELEASE_BASE === DEFAULT_RELEASE_BASE.replace(/\/$/, '')) {
-    mirrors.push(MIRROR_RELEASE_BASE.replace(/\/$/, ''))
-  }
 
   let buffer
   let lastError
@@ -375,6 +386,16 @@ async function downloadAndExtract() {
 }
 
 async function main() {
+  // Offline, air-gapped and reproducible-build installs need a way to say
+  // "download nothing". Without this the only lever was breaking the network
+  // and waiting for the retries to give up.
+  if (process.env.CLAUDE_CODE_SKIP_POSTINSTALL === '1') {
+    console.log(
+      '[ripgrep] CLAUDE_CODE_SKIP_POSTINSTALL=1 — skipping download. ' +
+        'Search tools need `rg` on PATH or in src/utils/vendor/ripgrep/.',
+    )
+    return
+  }
   await downloadAndExtract()
 }
 
