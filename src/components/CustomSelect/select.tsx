@@ -329,6 +329,7 @@ export function Select<T>({
                 shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption}
                 shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption}
                 maxIndexWidth={maxIndexWidth}
+                hideIndexes={hideIndexes}
                 index={i}
                 inputValue={inputValue}
                 onInputChange={value => {
@@ -447,6 +448,7 @@ export function Select<T>({
                 shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption}
                 shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption}
                 maxIndexWidth={maxIndexWidth}
+                hideIndexes={hideIndexes}
                 index={i}
                 inputValue={inputValue}
                 onInputChange={value => {
@@ -689,6 +691,7 @@ export function Select<T>({
               shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption}
               shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption}
               maxIndexWidth={maxIndexWidth}
+              hideIndexes={hideIndexes}
               index={i}
               inputValue={inputValue}
               onInputChange={value => {

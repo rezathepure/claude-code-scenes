@@ -20,6 +20,11 @@ type Props<T> = {
   shouldShowUpArrow: boolean;
   maxIndexWidth: number;
   index: number;
+  /**
+   * Mirrors Select's own prop. Every other row honours it; this one did not,
+   * so a menu built with hideIndexes still printed "1." in front of its input.
+   */
+  hideIndexes?: boolean;
   inputValue: string;
   onInputChange: (value: string) => void;
   onSubmit: (value: string) => void;
@@ -88,6 +93,7 @@ export function SelectInputOption<T>({
   shouldShowUpArrow,
   maxIndexWidth,
   index,
+  hideIndexes = false,
   inputValue,
   onInputChange,
   onSubmit,
@@ -229,7 +235,7 @@ export function SelectInputOption<T>({
         declareCursor={false}
       >
         <Box flexDirection="row" flexShrink={layout === 'compact' ? 0 : undefined}>
-          <Text dimColor>{`${index}.`.padEnd(maxIndexWidth + 2)}</Text>
+          {!hideIndexes && <Text dimColor>{`${index}.`.padEnd(maxIndexWidth + 2)}</Text>}
           {children}
           {showLabel ? (
             <>

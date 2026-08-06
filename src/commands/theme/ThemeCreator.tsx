@@ -347,9 +347,18 @@ export function ThemeCreator({ description, onDone }: Props): React.ReactNode {
       </Box>
 
       <Select
-        // Remounted per stage so the input starts empty and the placeholder
-        // matches what you are looking at.
-        key={stage}
+        // Remounted per stage so the placeholder matches what you are looking
+        // at, and per landed draft so the box empties once your instruction has
+        // been applied. Without the draft half, submitRefinement cleared its
+        // own ref but the text stayed on screen — so the box read as though it
+        // still held an instruction that had in fact already been used, and
+        // pressing Enter again did nothing.
+        //
+        // drafts only grows on 'refined' and shrinks on 'undo', never on
+        // 'refineStarted', so this cannot remount mid-request. A refinement
+        // that failed or changed nothing deliberately keeps your text, which
+        // is what you want to edit and retry.
+        key={`${stage}:${state.drafts.length}`}
         isDisabled={busy}
         hideIndexes
         defaultFocusValue="refine"
