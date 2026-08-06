@@ -7,7 +7,11 @@ binding = "BUCKET"
 bucket_name = "cloud-artifacts"
 
 [vars]
-PUBLIC_URL = "https://cloud-artifacts.claude-code-best.win"
+# PUBLIC_URL is deliberately empty: the Worker falls back to the origin the
+# request arrived on, so a plain `wrangler deploy` returns working links with
+# no further configuration, and a custom domain added later just works. Set it
+# only when a proxy hides the real host from the Worker.
+PUBLIC_URL = ""
 DEFAULT_TTL_DAYS = "7"
 MAX_TTL_DAYS = "30"
 MAX_BYTES = "10485760"

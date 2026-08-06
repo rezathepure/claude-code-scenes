@@ -12,19 +12,25 @@ npx wrangler r2 bucket lifecycle add "$BUCKET" delete-7d "7d/" --expire-days 7 -
 echo "==> Adding lifecycle rule: prefix '30d/' -> expire after 30 days"
 npx wrangler r2 bucket lifecycle add "$BUCKET" delete-30d "30d/" --expire-days 30 --force
 
-echo "==> Setting secret TOKEN (paste value, then Enter)"
+# Accept the token on stdin so this can run unattended; fall back to the
+# interactive prompt when there is a terminal and nothing was piped in.
+echo "==> Setting secret TOKEN"
 npx wrangler secret put TOKEN
 
 cat <<'NEXT'
 
-==> Done. Remaining manual steps:
+==> Done. Next:
 
-  1. Bind a custom domain to the Worker (POST + GET 都走 Worker，单一域名):
-       Dashboard: Workers & Pages > cloud-artifacts > Settings > Domains & Routes > Add > Custom Domain
-       填入你的 domain（如 artifacts.example.com），Cloudflare 会自动加 DNS 记录和 SSL。
+  bun run deploy
 
-  2. Update wrangler.toml [vars] PUBLIC_URL 为上一步的 domain（带 https://，如 https://artifacts.example.com）。
+That publishes to https://cloud-artifacts.<your-subdomain>.workers.dev and the
+Worker returns links on whatever origin it is reached at, so there is nothing
+else to configure. Point the CLI at it:
 
-  3. Deploy:
-       bun run deploy
+  CLAUDE_ARTIFACTS_URL=https://cloud-artifacts.<your-subdomain>.workers.dev
+  CLAUDE_ARTIFACTS_TOKEN=<the token you just set>
+
+A custom domain is optional. If you add one (Dashboard > Workers & Pages >
+cloud-artifacts > Settings > Domains & Routes > Add > Custom Domain), links
+follow it automatically — no redeploy, no PUBLIC_URL to update.
 NEXT

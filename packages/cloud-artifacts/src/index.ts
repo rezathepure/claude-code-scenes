@@ -104,9 +104,17 @@ async function handleUpload(
     httpMetadata: { contentType: HTML_CONTENT_TYPE },
   })
 
+  // PUBLIC_URL is optional: unset, the Worker names itself after whatever
+  // origin the request arrived on. That is correct for a workers.dev
+  // deployment, survives adding a custom domain later without a redeploy, and
+  // removes the chicken-and-egg of having to know the URL before the first
+  // deploy can tell you what it is. Set it only to force a specific origin —
+  // e.g. when a proxy sits in front and the Worker never sees the real host.
+  const publicUrl = (env.PUBLIC_URL ?? '').trim() || url.origin
+
   const expiresAt = new Date(Date.now() + ttl * 24 * 60 * 60 * 1000)
   return json(
-    { id, url: `${env.PUBLIC_URL}/${key}`, expiresAt: expiresAt.toISOString() },
+    { id, url: `${publicUrl}/${key}`, expiresAt: expiresAt.toISOString() },
     200,
   )
 }
