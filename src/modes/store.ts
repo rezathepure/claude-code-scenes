@@ -171,18 +171,36 @@ export function getCurrentModeSlug(): string {
  * cost on the first launch after upgrading and a no-op on every launch after.
  */
 export function migrateLegacyModeSetting(): void {
-  const userSettings = getSettingsForSource('userSettings') as
-    | Record<string, unknown>
-    | undefined
+  const patch = planModeSettingMigration(
+    getSettingsForSource('userSettings') as Record<string, unknown> | undefined,
+  )
+  if (patch === null) return
+  updateSettingsForSource('userSettings', patch)
+}
+
+/**
+ * The decision half of `migrateLegacyModeSetting`: given the user's settings,
+ * the patch to apply, or null when there is nothing to do.
+ *
+ * Pure, and separate from the write for a specific reason. Testing the
+ * migration end-to-end means importing the settings module, which other suites
+ * replace with `mock.module` — that is process-global in Bun and order
+ * dependent, so the same test passed locally and failed in CI, where a mocked
+ * `updateSettingsForSource` silently wrote nothing. A pure function has no
+ * such dependency and cannot be poisoned by another file.
+ */
+export function planModeSettingMigration(
+  userSettings: Record<string, unknown> | undefined,
+): Record<string, unknown> | null {
   const legacy = userSettings?.[LEGACY_MODE_SETTING_KEY]
-  if (typeof legacy !== 'string') return
+  if (typeof legacy !== 'string') return null
 
   const alreadyMigrated = typeof userSettings?.[MODE_SETTING_KEY] === 'string'
-  updateSettingsForSource('userSettings', {
+  return {
     ...(alreadyMigrated ? {} : { [MODE_SETTING_KEY]: legacy }),
-    // updateSettingsForSource treats undefined as deletion.
+    // updateSettingsForSource treats an explicit undefined as deletion.
     [LEGACY_MODE_SETTING_KEY]: undefined,
-  } as Record<string, unknown>)
+  }
 }
 
 export function getCurrentMode(): Mode {
