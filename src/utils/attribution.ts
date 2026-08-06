@@ -64,7 +64,7 @@ export function getAttributionTexts(): AttributionTexts {
 
   const modelName = getRealModelName()
   const email = getAttributionEmail(modelName)
-  const defaultAttribution = `🤖 Generated with [Claude Code Best](${PRODUCT_URL})`
+  const defaultAttribution = `🤖 Generated with [claude-code-scenes](${PRODUCT_URL})`
   const defaultCommit = `Co-Authored-By: ${modelName} <${email}>`
 
   const settings = getInitialSettings()
@@ -356,7 +356,7 @@ export async function getEnhancedPRAttribution(
     memoryAccessCount > 0
       ? `, ${memoryAccessCount} ${memoryAccessCount === 1 ? 'memory' : 'memories'} recalled`
       : ''
-  const summary = `🤖 Generated with [Claude Code Best](${PRODUCT_URL}) (${claudePercent}% ${promptCount}-shotted by ${realModelName}${memSuffix})`
+  const summary = `🤖 Generated with [claude-code-scenes](${PRODUCT_URL}) (${claudePercent}% ${promptCount}-shotted by ${realModelName}${memSuffix})`
 
   // Append trailer lines for squash-merge survival. Only for allowlisted repos
   // (INTERNAL_MODEL_REPOS) and only in builds with COMMIT_ATTRIBUTION enabled —

@@ -482,6 +482,11 @@ export async function createChatGPTResponsesStream(params: {
     'OpenAI-Beta': 'responses=experimental',
     Origin: 'https://chatgpt.com',
     Referer: 'https://chatgpt.com/',
+    // Deliberately NOT renamed to match this fork. This identifies the client
+    // to OpenAI's Codex backend, which may well accept only values it knows;
+    // a rename could turn every request into a 403, and there is no way to
+    // find out short of trying it against the live service. It is inert
+    // otherwise — this path only runs under ChatGPT OAuth.
     originator: 'claude-code-best',
   }
   if (auth.accountId) {

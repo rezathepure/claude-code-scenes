@@ -1,27 +1,29 @@
-const MODEL_EMAIL_MAP: Array<{ keywords: string[]; email: string }> = [
-  { keywords: ['claude'], email: 'noreply@anthropic.com' },
-  // 由于找不到他们的邮箱和头像, 所以改为了使用我们的邮箱先记录, 后续官方有 github 能用的邮箱可以替换
-  // github 组织是不能用 co author 的
-  {
-    keywords: ['gpt', 'dall-e', 'o1-', 'o3-', 'o4-'],
-    email: 'openai@claude-code-best.win',
-  },
-  { keywords: ['gemini'], email: 'google-gemini@claude-code-best.win' },
-  { keywords: ['grok'], email: 'xai-org@claude-code-best.win' },
-  { keywords: ['glm'], email: 'zai-org@claude-code-best.win' },
-  { keywords: ['deepseek'], email: 'deepseek-ai@claude-code-best.win' },
-  { keywords: ['qwen'], email: 'QwenLM@claude-code-best.win' },
-  { keywords: ['minimax'], email: 'MiniMax-AI@claude-code-best.win' },
-  { keywords: ['mimo'], email: 'XiaomiMiMo@claude-code-best.win' },
-  { keywords: ['kimi'], email: 'MoonshotAI@claude-code-best.win' },
-]
+/**
+ * The email that goes in a commit's `Co-Authored-By:` trailer.
+ *
+ * Git requires an address in that trailer, but there is no honest address to
+ * give for a third-party model. Upstream filled the gap with nine addresses at
+ * its own domain — `openai@claude-code-best.win` and friends — with a comment
+ * saying they were placeholders until something better turned up. Inherited
+ * unchanged, that put another project's domain into the permanent public git
+ * history of anyone using a non-Claude model through this fork.
+ *
+ * So: `.invalid` (RFC 2606), a TLD guaranteed never to resolve. It claims no
+ * domain, impersonates no organisation, and cannot deliver mail to a stranger.
+ * The informative half of the trailer is the model name, which sits next to it
+ * and is unaffected.
+ *
+ * Claude keeps `noreply@anthropic.com` because that address is real and is
+ * what Anthropic itself uses.
+ */
+
+const ANTHROPIC_NOREPLY = 'noreply@anthropic.com'
+
+/** Structurally undeliverable: `.invalid` can never be registered. */
+const UNATTRIBUTABLE = 'noreply@model.invalid'
 
 export function getAttributionEmail(modelName: string): string {
-  const lower = modelName.toLowerCase()
-  for (const { keywords, email } of MODEL_EMAIL_MAP) {
-    if (keywords.some(kw => lower.includes(kw))) {
-      return email
-    }
-  }
-  return 'noreply@anthropic.com'
+  return modelName.toLowerCase().includes('claude')
+    ? ANTHROPIC_NOREPLY
+    : UNATTRIBUTABLE
 }
