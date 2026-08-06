@@ -65,12 +65,7 @@ bun run precheck
 
 # Remote Control Server
 bun run rcs
-
-# Docs dev server (Mintlify)
-bun run docs:dev
 ```
-
-详细的测试规范、覆盖状态和改进计划见 `docs/testing-spec.md`。
 
 ## Architecture
 
@@ -188,7 +183,6 @@ bun run docs:dev
 - **`src/bridge/`** — Remote Control / Bridge 模式。feature-gated by `BRIDGE_MODE`。包含 bridge API、会话管理、JWT 认证、消息传输、权限回调等。Entry: `bridgeMain.ts`。
 - **`packages/remote-control-server/`** — 自托管 RCS，支持 Docker 部署，含 Web UI 控制面板（React 19 + Vite + Radix UI）。支持 ACP agent 通过 acp-link 接入（ACP WebSocket handler、relay handler、SSE event stream）。通过 `bun run rcs` 启动。
 - CLI 快速路径: `claude remote-control` / `claude rc` / `claude bridge`。
-- 详见 `docs/features/remote-control-self-hosting.md`。
 
 ### HTML Artifact Hosting
 
