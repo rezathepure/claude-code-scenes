@@ -502,6 +502,42 @@ const createDefaultState = <T>({
   }
 }
 
+/**
+ * Which option keeps focus when the `options` array is replaced mid-render.
+ *
+ * The user's own choice wins, as long as the thing they chose still exists.
+ * That sounds obvious, but the old order — `focusValue` first — meant any
+ * caller passing `defaultFocusValue` had focus yanked back to it every time
+ * the options identity changed. Options are usually built inline, so they are
+ * a new array on every parent render; on a screen that repaints continuously
+ * (the theme creator, with an animated backdrop behind the menu) that fired
+ * constantly, and arrowing down to another entry visibly snapped back a
+ * moment later.
+ *
+ * `defaultFocusValue` is documented as "initial value to focus … when the
+ * component mounts", so honouring it on every later re-derivation was the bug.
+ * It still applies at mount, and still applies here when the focused option
+ * has genuinely disappeared.
+ *
+ * Pure and exported so the rule can be tested without a terminal renderer.
+ */
+export function resolveFocusAfterOptionsChange<T>({
+  currentFocus,
+  options,
+  focusValue,
+  initialFocusValue,
+}: {
+  currentFocus: T | undefined
+  options: ReadonlyArray<{ value: T }>
+  focusValue?: T
+  initialFocusValue?: T
+}): T | undefined {
+  const stillExists =
+    currentFocus !== undefined &&
+    options.some(option => option.value === currentFocus)
+  return stillExists ? currentFocus : (focusValue ?? initialFocusValue)
+}
+
 export function useSelectNavigation<T>({
   visibleOptionCount = 5,
   options,
@@ -531,8 +567,12 @@ export function useSelectNavigation<T>({
       state: createDefaultState({
         visibleOptionCount,
         options,
-        initialFocusValue:
-          focusValue ?? state.focusedValue ?? initialFocusValue,
+        initialFocusValue: resolveFocusAfterOptionsChange({
+          currentFocus: state.focusedValue,
+          options,
+          focusValue,
+          initialFocusValue,
+        }),
         currentViewport: {
           visibleFromIndex: state.visibleFromIndex,
           visibleToIndex: state.visibleToIndex,
