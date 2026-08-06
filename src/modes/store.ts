@@ -4,14 +4,25 @@ import { useSyncExternalStore } from 'react'
 import { parse as parseYaml } from 'yaml'
 import {
   getInitialSettings,
+  getSettingsForSource,
   updateSettingsForSource,
 } from '../utils/settings/settings.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { DEFAULT_MODES } from './defaults.js'
-import type { CCBMode } from './types.js'
+import type { Mode } from './types.js'
+
+/** Where the chosen mode is persisted in settings.json. */
+const MODE_SETTING_KEY = 'ccsMode'
+
+/**
+ * What that key was called when this was upstream's code. Still read, never
+ * written: a user who picked a mode before the rename would otherwise be
+ * silently dropped back to 'default' on upgrade, with nothing to explain it.
+ */
+const LEGACY_MODE_SETTING_KEY = 'ccbMode'
 
 let currentModeSlug: string | null = null
-let customModes: CCBMode[] | null = null
+let customModes: Mode[] | null = null
 const modeListeners = new Set<() => void>()
 
 /**
@@ -47,7 +58,7 @@ function parseMarkdownFrontmatter(raw: string): {
   }
 }
 
-function loadCustomModes(): CCBMode[] {
+function loadCustomModes(): Mode[] {
   if (customModes !== null) return customModes
   customModes = []
   try {
@@ -91,7 +102,7 @@ function loadCustomModes(): CCBMode[] {
           permissions: {
             defaultMode:
               ((data.permissions as Record<string, unknown>)
-                ?.default_mode as CCBMode['permissions']['defaultMode']) ||
+                ?.default_mode as Mode['permissions']['defaultMode']) ||
               'default',
             memoryExtract: Boolean(
               (data.permissions as Record<string, unknown>)?.memory_extract ??
@@ -101,8 +112,7 @@ function loadCustomModes(): CCBMode[] {
           responseStyle: {
             verbosity:
               ((data.response_style as Record<string, unknown>)
-                ?.verbosity as CCBMode['responseStyle']['verbosity']) ||
-              'normal',
+                ?.verbosity as Mode['responseStyle']['verbosity']) || 'normal',
           },
         })
       } catch {
@@ -115,7 +125,7 @@ function loadCustomModes(): CCBMode[] {
   return customModes
 }
 
-function getAllModes(): CCBMode[] {
+function getAllModes(): Mode[] {
   const custom = loadCustomModes()
   if (custom.length === 0) return DEFAULT_MODES
   // Custom modes override defaults with same slug
@@ -123,15 +133,59 @@ function getAllModes(): CCBMode[] {
   return [...custom, ...DEFAULT_MODES.filter(m => !slugs.has(m.slug))]
 }
 
+/**
+ * Picks the mode slug out of a settings object, preferring the current key and
+ * falling back to the pre-rename one.
+ *
+ * Split out from `getCurrentModeSlug` because that memoizes for the process
+ * lifetime, which makes it awkward to test more than one settings shape.
+ */
+export function resolveModeSlug(settings: Record<string, unknown>): string {
+  const stored = settings[MODE_SETTING_KEY] ?? settings[LEGACY_MODE_SETTING_KEY]
+  return (typeof stored === 'string' ? stored : '') || 'default'
+}
+
 export function getCurrentModeSlug(): string {
   if (currentModeSlug === null) {
-    const settings = getInitialSettings() as Record<string, unknown>
-    currentModeSlug = (settings.ccbMode as string) || 'default'
+    // Merged across sources, so a project-level choice still wins — reading
+    // only userSettings here would change existing behaviour. The legacy key
+    // is the fallback, which keeps a pre-rename choice working even on a
+    // machine where the migration below has not run (or could not write).
+    currentModeSlug = resolveModeSlug(
+      getInitialSettings() as Record<string, unknown>,
+    )
   }
   return currentModeSlug
 }
 
-export function getCurrentMode(): CCBMode {
+/**
+ * Moves a pre-rename `ccbMode` in the user's settings.json over to `ccsMode`,
+ * then removes the old key.
+ *
+ * Only ever touches userSettings. A `ccbMode` coming from project or policy
+ * settings is left alone — those are not ours to rewrite, and the read above
+ * still honours them.
+ *
+ * Idempotent, and never clobbers: if both keys are present the newer one wins
+ * and the legacy key is simply dropped. Runs from init, so it is a one-time
+ * cost on the first launch after upgrading and a no-op on every launch after.
+ */
+export function migrateLegacyModeSetting(): void {
+  const userSettings = getSettingsForSource('userSettings') as
+    | Record<string, unknown>
+    | undefined
+  const legacy = userSettings?.[LEGACY_MODE_SETTING_KEY]
+  if (typeof legacy !== 'string') return
+
+  const alreadyMigrated = typeof userSettings?.[MODE_SETTING_KEY] === 'string'
+  updateSettingsForSource('userSettings', {
+    ...(alreadyMigrated ? {} : { [MODE_SETTING_KEY]: legacy }),
+    // updateSettingsForSource treats undefined as deletion.
+    [LEGACY_MODE_SETTING_KEY]: undefined,
+  } as Record<string, unknown>)
+}
+
+export function getCurrentMode(): Mode {
   const slug = getCurrentModeSlug()
   const modes = getAllModes()
   return modes.find(m => m.slug === slug) ?? DEFAULT_MODES[0]
@@ -146,10 +200,9 @@ export function setCurrentMode(slug: string): void {
     )
   }
   currentModeSlug = slug
-  updateSettingsForSource('userSettings', { ccbMode: slug } as Record<
-    string,
-    unknown
-  >)
+  updateSettingsForSource('userSettings', {
+    [MODE_SETTING_KEY]: slug,
+  } as Record<string, unknown>)
   for (const listener of modeListeners) listener()
 }
 
@@ -159,15 +212,15 @@ function subscribeMode(listener: () => void): () => void {
 }
 
 /** Reactive hook — re-renders the component when the mode changes. */
-export function useCurrentMode(): CCBMode {
+export function useCurrentMode(): Mode {
   return useSyncExternalStore(subscribeMode, getCurrentMode)
 }
 
-export function listModes(): CCBMode[] {
+export function listModes(): Mode[] {
   return getAllModes()
 }
 
-export function cycleMode(): CCBMode {
+export function cycleMode(): Mode {
   const modes = listModes()
   const current = getCurrentModeSlug()
   const idx = modes.findIndex(m => m.slug === current)

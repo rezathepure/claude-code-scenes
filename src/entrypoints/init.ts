@@ -61,6 +61,7 @@ import { seedStarterThemes } from '../themes/seed.js'
 import { loadUserThemes } from '../themes/loader.js'
 import { migrateLegacyThemes } from '../themes/migrate.js'
 import { initializeThemeWatcher } from '../themes/watcher.js'
+import { migrateLegacyModeSetting } from '../modes/store.js'
 
 // initialize1PEventLogging is dynamically imported to defer OpenTelemetry sdk-logs/resources
 
@@ -80,6 +81,10 @@ export const init = memoize(async (): Promise<void> => {
     // reads — must run before the watcher starts, or our own renames would
     // trigger reload churn.
     await migrateLegacyThemes()
+    // Rename the persisted mode key, ccbMode → ccsMode. Cheap and synchronous;
+    // reads fall back to the old key regardless, so this is tidying rather
+    // than something the app depends on.
+    migrateLegacyModeSetting()
     // Put the shipped starter themes on disk. After the migration, so a file
     // the user already had wins over the shipped copy, and before the load
     // below, which is what actually registers them.
