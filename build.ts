@@ -1,3 +1,4 @@
+import { existsSync } from 'fs'
 import { readdir, readFile, writeFile, cp } from 'fs/promises'
 import { join } from 'path'
 import { getMacroDefines } from './scripts/defines.ts'
@@ -88,9 +89,17 @@ const audioCaptureDir = join(outdir, 'vendor', 'audio-capture')
 await cp('vendor/audio-capture', audioCaptureDir, { recursive: true })
 console.log(`Copied vendor/audio-capture/ → ${audioCaptureDir}/`)
 
+// Optional, unlike audio-capture: since ripgrep stopped arriving via
+// postinstall, a fresh clone has no binaries until `bun run vendor:ripgrep`,
+// and a build is not the place to discover that. The search tools fall back to
+// a system `rg`; a publish is guarded by the workflow instead.
 const ripgrepDir = join(outdir, 'vendor', 'ripgrep')
-await cp('src/utils/vendor/ripgrep', ripgrepDir, { recursive: true })
-console.log(`Copied src/utils/vendor/ripgrep/ → ${ripgrepDir}/`)
+if (existsSync('src/utils/vendor/ripgrep')) {
+  await cp('src/utils/vendor/ripgrep', ripgrepDir, { recursive: true })
+  console.log(`Copied src/utils/vendor/ripgrep/ → ${ripgrepDir}/`)
+} else {
+  console.warn('No src/utils/vendor/ripgrep — run `bun run vendor:ripgrep`')
+}
 
 // Step 5: Generate cli-bun and cli-node executable entry points
 const cliBun = join(outdir, 'cli-bun.js')

@@ -7,7 +7,7 @@
  * 3. Generate dual entry points (cli-bun.js, cli-node.js)
  */
 import { readdir, readFile, writeFile, cp } from 'node:fs/promises'
-import { chmodSync } from 'node:fs'
+import { chmodSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 const outdir = 'dist'
@@ -64,9 +64,17 @@ async function postBuild() {
   } as never)
   console.log(`Copied vendor/audio-capture/ → ${audioCaptureDir}/`)
 
+  // Optional — see the matching note in build.ts. The publish workflow asserts
+  // all six targets landed in dist/, which is where it actually matters.
   const ripgrepDir = join(outdir, 'vendor', 'ripgrep')
-  await cp('src/utils/vendor/ripgrep', ripgrepDir, { recursive: true } as never)
-  console.log(`Copied src/utils/vendor/ripgrep/ → ${ripgrepDir}/`)
+  if (existsSync('src/utils/vendor/ripgrep')) {
+    await cp('src/utils/vendor/ripgrep', ripgrepDir, {
+      recursive: true,
+    } as never)
+    console.log(`Copied src/utils/vendor/ripgrep/ → ${ripgrepDir}/`)
+  } else {
+    console.warn('No src/utils/vendor/ripgrep — run `bun run vendor:ripgrep`')
+  }
 
   // Step 3: Generate dual entry points
   const cliBun = join(outdir, 'cli-bun.js')

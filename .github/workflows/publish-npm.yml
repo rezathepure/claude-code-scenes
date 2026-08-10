@@ -39,6 +39,13 @@ jobs:
       - name: Type check
         run: bun run typecheck
 
+      # Before the tests, not just before the build: some of them shell out to
+      # `bun run build`, and since ripgrep stopped arriving via postinstall a
+      # runner has no binaries until this step. --all rather than the host
+      # target alone, so the artifact built below is publishable as-is.
+      - name: Vendor ripgrep for every target
+        run: bun run vendor:ripgrep:all
+
       - name: Run tests
         run: bun test
 
@@ -54,12 +61,6 @@ jobs:
       #
       # `prepublishOnly` still runs and rebuilds; that is deterministic from
       # the same source, and keeps a manual `npm publish` safe.
-      # Every ripgrep target, not just this runner's. They ship inside the
-      # tarball so that installing the package runs no scripts and needs no
-      # network beyond the registry; see scripts/vendor-ripgrep.cjs.
-      - name: Vendor ripgrep for every target
-        run: bun run vendor:ripgrep:all
-
       - name: Build publish artifact
         run: bun run build:vite
 
