@@ -1,0 +1,18 @@
+<!--
+  The six-arm asterisk Claude Code prints at startup, in the brand terra cotta.
+
+  Deliberately not a mascot: the inherited one belonged to upstream, and this
+  project's identity is the animation rather than a mark. A glyph the tool
+  itself already draws is the honest choice.
+
+  Drawn as strokes rather than a text <tspan>, because a favicon that depends
+  on a font renders as a blank square wherever that font is missing.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="claude-code-scenes">
+  <rect width="32" height="32" rx="7.5" fill="#17130f"/>
+  <g stroke="#d77757" stroke-width="3.9" stroke-linecap="round">
+    <path d="M16 6.3v19.4"/>
+    <path d="M7.6 11.15 24.4 20.85"/>
+    <path d="M7.6 20.85 24.4 11.15"/>
+  </g>
+</svg>

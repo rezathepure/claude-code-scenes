@@ -1,46 +1,75 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>claude-code-scenes — animated themes for the Claude Code terminal</title>
-<meta name="description" content="Animated backdrops for the Claude Code terminal, and a way to design your own by describing it. Three themes ship; the rest you invent.">
-<meta property="og:title" content="claude-code-scenes">
-<meta property="og:description" content="Animated themes for the Claude Code terminal. Describe a vibe, get a theme.">
-<meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>✦</text></svg>">
-<style>
-  :root {
-    --bg:        #faf9f7;
-    --surface:   #ffffff;
-    --edge:      #e6e0d8;
-    --ink:       #2c2622;
-    --ink-soft:  #6b6058;
-    --ink-faint: #9a8f85;
-    --accent:    #c25c38;
-    --accent-sf: #f2e3db;
-    --term-bg:   #0d0d0e;
+<title>claude-code-scenes — a Claude Code CLI with animated themes</title>
+<meta name="description" content="A fun Claude Code CLI with animated themes — prompt it, and it builds you your own. Three ship with it; everything else you describe.">
+<meta name="color-scheme" content="dark light">
 
-    --serif: ui-serif, Iowan Old Style, Palatino, Georgia, serif;
+<meta property="og:title" content="claude-code-scenes">
+<meta property="og:description" content="A fun Claude Code CLI with animated themes — prompt it, and it builds you your own.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rezathepure.github.io/claude-code-scenes/">
+<meta property="og:image" content="https://rezathepure.github.io/claude-code-scenes/assets/demo/demo.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="mask-icon" href="favicon.svg" color="#d77757">
+
+<script>
+  // Runs before first paint so the stored choice never flashes the other mode.
+  // First visit follows the OS; the toggle overrides it and is remembered.
+  try {
+    const saved = localStorage.getItem('ccs-theme')
+    const os = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+    document.documentElement.dataset.theme = saved || os
+  } catch { /* private mode: the dark default in the markup stands */ }
+</script>
+
+<style>
+  /* --------------------------------------------------------------------------
+     Palette. Dark is the base because that is where Claude Code lives; light is
+     a full override rather than a tint, so neither mode is the other's leftover.
+     Terminal surfaces stay dark in both — a screenshot of a terminal should not
+     change colour because the page around it did.
+     -------------------------------------------------------------------------- */
+
+  :root {
+    --bg:        #14110e;
+    --raised:    #1c1713;
+    --edge:      #2e2721;
+    --edge-lit:  #473c33;
+    --ink:       #efe7de;
+    --ink-soft:  #b3a496;
+    --ink-dim:   #7e7165;
+    --accent:    #e08a63;
+    --accent-sf: #2b1e16;
+
+    /* The frames in assets/demo/ carry their own window, painted on this. */
+    --term:      #0d1117;
+    --term-ink:  #cfd6e0;
+    --term-dim:  #6f7b8c;
+    --term-edge: #29313d;
+
+    --serif: ui-serif, "Iowan Old Style", Palatino, Georgia, serif;
     --sans:  ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
     --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
 
-    --measure: 34rem;
+    --measure: 36rem;
     --gutter: clamp(1.25rem, 5vw, 3rem);
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      /* Warm dark, not blue-black — the brand's whole temperature argument. */
-      --bg:        #17130f;
-      --surface:   #1f1a15;
-      --edge:      #332a23;
-      --ink:       #ece5dd;
-      --ink-soft:  #a99b8d;
-      --ink-faint: #7a6d61;
-      --accent:    #e08a63;
-      --accent-sf: #2e211a;
-    }
+  :root[data-theme="light"] {
+    --bg:        #faf9f7;
+    --raised:    #ffffff;
+    --edge:      #e7e1d9;
+    --edge-lit:  #d2c8bb;
+    --ink:       #2a2420;
+    --ink-soft:  #625950;
+    --ink-dim:   #948a7f;
+    --accent:    #c25c38;
+    --accent-sf: #f7e9e2;
   }
 
   *, *::before, *::after { box-sizing: border-box; }
@@ -53,407 +82,790 @@
     font-size: 17px;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  .wrap { max-width: 68rem; margin: 0 auto; padding: 0 var(--gutter); }
+  .wrap { max-width: 66rem; margin: 0 auto; padding: 0 var(--gutter); }
 
   a { color: var(--accent); text-underline-offset: 3px; }
-  code, kbd { font-family: var(--mono); font-size: 0.88em; }
+  a:hover { color: var(--ink); }
 
-  h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: -0.015em; line-height: 1.15; }
+  code, kbd, samp { font-family: var(--mono); font-size: 0.88em; }
+  p code, li code {
+    background: var(--accent-sf);
+    border-radius: 4px;
+    padding: 0.1em 0.34em;
+  }
+
+  h1, h2 { font-family: var(--serif); font-weight: 500; letter-spacing: -0.015em; line-height: 1.12; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
 
   .eyebrow {
     font-family: var(--mono);
     font-size: 0.72rem;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--ink-faint);
-    margin: 0 0 1.25rem;
+    color: var(--ink-dim);
+    margin: 0 0 0.9rem;
   }
+  .eyebrow .star { color: var(--accent); letter-spacing: 0; }
 
-  /* ---------- hero ---------- */
+  /* ---------- top bar ---------------------------------------------------- */
 
-  header { padding: clamp(3.5rem, 9vw, 6.5rem) 0 0; }
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid transparent;
+  }
+  .bar.scrolled { border-bottom-color: var(--edge); }
+  .bar .wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 3.25rem;
+  }
+  .brand {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--ink);
+    text-decoration: none;
+    margin-right: auto;
+    white-space: nowrap;
+  }
+  .brand .star { color: var(--accent); }
+  .bar a.link {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .bar a.link:hover { color: var(--ink); }
 
-  h1 { font-size: clamp(2.6rem, 7vw, 4.25rem); margin: 0 0 1rem; }
-  h1 .moves { color: var(--accent); font-style: italic; }
+  #mode {
+    background: none;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 0.34rem 0.5rem;
+  }
+  #mode:hover { color: var(--ink); border-color: var(--edge-lit); }
+
+  /* ---------- hero -------------------------------------------------------- */
+
+  header { padding: clamp(2.75rem, 8vw, 5.5rem) 0 0; }
+
+  h1 {
+    font-size: clamp(2.3rem, 6.2vw, 3.9rem);
+    margin: 0 0 1rem;
+    max-width: 22ch;
+  }
+  h1 em { color: var(--accent); font-style: italic; }
 
   .lede {
-    font-size: clamp(1.05rem, 2.4vw, 1.3rem);
+    font-size: clamp(1.05rem, 2.3vw, 1.28rem);
     color: var(--ink-soft);
     max-width: var(--measure);
-    margin: 0 0 2rem;
+    margin: 0 0 2.25rem;
     text-wrap: pretty;
   }
 
-  /* ---------- the terminal demo ---------- */
-
-  .demo {
-    background: var(--term-bg);
+  /* The captures already include a window — padding, radius, shadow — drawn on
+     #0d1117. Framing them again would produce a window inside a window, so the
+     container only matches that field and rounds the corner off it. */
+  .media {
+    background: var(--term);
     border: 1px solid var(--edge);
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 32px -12px rgba(0,0,0,.28);
+    box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 26px 60px -26px rgba(0,0,0,.55);
   }
-
-  .demo-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 0.85rem;
-    border-bottom: 1px solid rgba(255,255,255,.07);
-  }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.16); }
-  .demo-title {
-    margin-left: 0.4rem;
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: rgba(255,255,255,.4);
-  }
-
-  .stage { position: relative; }
-  /* Reserve the aspect up front so switching themes cannot shift the page. */
-  .stage img { display: block; width: 100%; height: auto; aspect-ratio: 720 / 456; }
-  .stage img[hidden] { display: none; }
-
-  /* ---------- theme switcher ---------- */
-
-  .switch {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 1rem 0 0;
-    padding: 0;
-    list-style: none;
-  }
-  .switch button {
-    font-family: var(--mono);
-    font-size: 0.8rem;
-    color: var(--ink-soft);
-    background: transparent;
-    border: 1px solid var(--edge);
-    border-radius: 999px;
-    padding: 0.35rem 0.9rem;
-    cursor: pointer;
-    transition: color .15s, border-color .15s, background .15s;
-  }
-  .switch button:hover { color: var(--ink); border-color: var(--ink-faint); }
-  .switch button[aria-selected="true"] {
-    color: var(--accent);
-    border-color: var(--accent);
-    background: var(--accent-sf);
-  }
-  .caption {
-    font-size: 0.9rem;
-    color: var(--ink-faint);
-    margin: 0.85rem 0 0;
-    min-height: 1.65em;
-  }
-  .caption .label { font-family: var(--mono); color: var(--ink-soft); }
-
-  /* ---------- install ---------- */
-
-  .install {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-    margin: 2.25rem 0 0;
-  }
-  .cmd {
-    font-family: var(--mono);
-    font-size: 0.92rem;
-    background: var(--surface);
-    border: 1px solid var(--edge);
-    border-radius: 7px;
-    padding: 0.6rem 0.95rem;
-  }
-  .cmd .prompt { color: var(--ink-faint); user-select: none; }
-  .ghost {
-    font-size: 0.92rem;
-    color: var(--ink-soft);
-    text-decoration: none;
-    border-bottom: 1px solid var(--edge);
-    padding-bottom: 1px;
-  }
-  .ghost:hover { color: var(--ink); border-color: var(--ink-faint); }
-
-  /* ---------- sections ---------- */
-
-  section { padding: clamp(4rem, 10vw, 7rem) 0 0; }
-  h2 { font-size: clamp(1.75rem, 4vw, 2.35rem); margin: 0 0 0.75rem; }
-  .section-lede { color: var(--ink-soft); max-width: var(--measure); margin: 0 0 2.5rem; text-wrap: pretty; }
-
-  /* Three starters, three columns — an even row rather than a widow. */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-    gap: 1.5rem;
-  }
-
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--edge);
-    border-radius: 10px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-  /* Cropped to a band rather than letterboxed: keeps the glyphs at a legible
-     scale while the card stays short enough that all three fit on a screen. */
-  .card img {
+  .media > video, .media > img {
     display: block;
     width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    background: var(--term-bg);
+    height: auto;
+    aspect-ratio: 760 / 354;
   }
-  .card-body { padding: 1rem 1.15rem 1.25rem; }
-  .card h3 { font-family: var(--mono); font-size: 0.95rem; margin: 0 0 0.35rem; letter-spacing: 0; }
-  .card h3 .kind { color: var(--ink-faint); font-weight: 400; }
-  .card p { margin: 0; font-size: 0.92rem; color: var(--ink-soft); }
 
-  /* ---------- the create flow ---------- */
+  .hero-media { max-width: 61rem; }
 
-  .steps { display: grid; gap: 1.75rem; max-width: 46rem; }
-  .step { display: grid; grid-template-columns: 2.25rem 1fr; gap: 1rem; align-items: start; }
-  .step .n {
+  figcaption {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    margin: 0.85rem 0 0;
+    max-width: 44rem;
+    text-wrap: pretty;
+  }
+  figure { margin: 0; }
+
+  /* ---------- sections ---------------------------------------------------- */
+
+  section { padding: clamp(3.75rem, 9vw, 6.5rem) 0 0; }
+  h2 { font-size: clamp(1.7rem, 3.8vw, 2.3rem); margin: 0 0 0.7rem; }
+  .section-lede { color: var(--ink-soft); max-width: var(--measure); margin: 0 0 2rem; text-wrap: pretty; }
+  .prose { max-width: var(--measure); color: var(--ink-soft); text-wrap: pretty; }
+  .prose strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- terminal cards ---------------------------------------------- */
+
+  .term {
+    position: relative;
+    background: var(--term);
+    border: 1px solid var(--term-edge);
+    border-radius: 10px;
+    padding: 1.05rem 1.15rem;
     font-family: var(--mono);
-    font-size: 0.78rem;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 50%;
-    width: 1.9rem; height: 1.9rem;
-    display: grid; place-items: center;
+    font-size: 0.9rem;
+    line-height: 1.85;
+    color: var(--term-ink);
+    overflow-x: auto;
   }
-  .step h3 { font-family: var(--sans); font-size: 1rem; font-weight: 600; margin: 0.2rem 0 0.3rem; }
-  .step p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+  .term .sh { color: var(--term-dim); user-select: none; }
+  .term .cm { color: var(--term-dim); }
+  .term .slash { color: var(--accent); }
+  .term .arrow { color: var(--term-dim); padding: 0 0.35rem; }
+  .term pre { margin: 0; font: inherit; }
 
-  .vibes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.7rem 0 0; padding: 0; list-style: none; }
-  .vibes li {
+  .copy {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
     font-family: var(--mono);
-    font-size: 0.78rem;
-    color: var(--ink-soft);
-    border: 1px dashed var(--edge);
-    border-radius: 5px;
-    padding: 0.2rem 0.55rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--term-dim);
+    background: transparent;
+    border: 1px solid var(--term-edge);
+    border-radius: 6px;
+    padding: 0.25rem 0.55rem;
+    cursor: pointer;
   }
+  .copy:hover { color: var(--term-ink); border-color: var(--term-dim); }
+  .copy[data-done="1"] { color: #4eba65; border-color: #4eba65; }
 
-  .note {
-    border-left: 2px solid var(--accent);
-    padding: 0.15rem 0 0.15rem 1.1rem;
-    margin: 2.5rem 0 0;
-    max-width: var(--measure);
+  .after-cmd {
     color: var(--ink-soft);
     font-size: 0.95rem;
+    margin: 1rem 0 0;
+    max-width: var(--measure);
   }
-  .note strong { color: var(--ink); font-weight: 600; }
 
-  /* ---------- footer ---------- */
+  /* ---------- the picker --------------------------------------------------- */
 
-  footer {
-    margin-top: clamp(4rem, 10vw, 7rem);
+  .picker {
+    display: grid;
+    grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+    gap: clamp(1.25rem, 3vw, 2.25rem);
+    align-items: start;
+  }
+  /* Stacks early: below this the preview column is narrower than the capture it
+     shows, and a soft 760px-wide terminal is worse than a stacked sharp one. */
+  @media (max-width: 56rem) { .picker { grid-template-columns: minmax(0, 1fr); } }
+
+  .menu { list-style: none; margin: 0; padding: 0; }
+  .menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 0 7px 7px 0;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+  }
+  .menu button:hover { color: var(--ink); background: var(--raised); }
+  .menu button[aria-selected="true"] {
+    color: var(--ink);
+    background: var(--raised);
+    border-left-color: var(--accent);
+  }
+  .menu .caret { color: var(--accent); opacity: 0; margin-right: 0.4rem; }
+  .menu button[aria-selected="true"] .caret { opacity: 1; }
+  .menu .chip { color: var(--ink-dim); }
+  .menu button[aria-selected="true"] .chip { color: var(--accent); }
+
+  .menu-hint {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    margin: 0.9rem 0 0 0.75rem;
+  }
+
+  /* Under the list rather than under the preview: it describes the row you just
+     moved to, so it belongs where your eye already is. */
+  .stage-desc {
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    margin: 1.6rem 0 0 0.75rem;
+    padding-left: 0.85rem;
+    border-left: 1px solid var(--edge);
+    text-wrap: pretty;
+  }
+
+  /* The frame borrows the previewed theme's own accent — too little contrast to
+     read as text, which is exactly why it can be the theme's colour verbatim in
+     both modes. */
+  .stage img { display: none; }
+  .stage img[data-on] { display: block; }
+
+  /* ---------- the create flow ---------------------------------------------- */
+
+  .box {
+    border: 1px solid var(--term-edge);
+    border-radius: 7px;
+    padding: 0.4rem 0.7rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.15rem;
+  }
+  .box .caret { color: var(--accent); margin-right: 0.5rem; }
+  #typed { color: var(--term-ink); white-space: pre; }
+  .cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1.05em;
+    background: var(--term-ink);
+    transform: translateY(0.15em);
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .vibes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+  .vibes button {
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px dashed var(--edge-lit);
+    border-radius: 5px;
+    padding: 0.22rem 0.6rem;
+    cursor: pointer;
+  }
+  .vibes button:hover { color: var(--ink); border-style: solid; border-color: var(--accent); background: var(--accent-sf); }
+
+  /* minmax(0,1fr), not 1fr: an auto minimum lets the un-wrappable command inside
+     .term push the track wider than the page instead of scrolling within it. */
+  .routes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; max-width: 46rem; }
+  .route-label {
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0 0 0.6rem;
+  }
+
+  /* ---------- bulleted notes ------------------------------------------------ */
+
+  /* ⏺ and ⎿ are the glyphs the tool prints for a call and its result. Reusing
+     them here costs nothing and makes the page read as the same object. */
+  .notes { list-style: none; margin: 0; padding: 0; max-width: 44rem; display: grid; gap: 1.4rem; }
+  .notes > li { display: grid; grid-template-columns: 1.35rem minmax(0, 1fr); gap: 0.55rem; }
+  .notes code { overflow-wrap: anywhere; }
+  .notes > li::before {
+    content: "⏺";
+    color: var(--accent);
+    font-size: 0.7rem;
+    line-height: 2.35;
+  }
+  .notes p { margin: 0; color: var(--ink-soft); text-wrap: pretty; }
+  .notes strong { color: var(--ink); font-weight: 600; }
+  .notes .sub {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.92rem;
+    color: var(--ink-dim);
+  }
+  .notes .sub::before { content: "⎿ "; font-family: var(--mono); }
+
+  /* ---------- footer -------------------------------------------------------- */
+
+  /* Classed rather than `footer p`: an element selector this late in the sheet
+     descends below the class selectors above it that target the same tags. */
+  .legal {
+    margin-top: clamp(4rem, 9vw, 6.5rem);
     border-top: 1px solid var(--edge);
-    padding: 2.5rem 0 4rem;
-    font-size: 0.87rem;
-    color: var(--ink-faint);
+    padding: 2.75rem 0 4.5rem;
+    font-size: 0.9rem;
+    color: var(--ink-dim);
   }
-  footer p { max-width: 44rem; margin: 0 0 0.9rem; text-wrap: pretty; }
-  footer a { color: var(--ink-soft); }
+  .legal h2 { font-size: 1.35rem; color: var(--ink); margin-bottom: 1rem; }
+  .legal p { max-width: 46rem; margin: 0 0 1rem; color: var(--ink-soft); text-wrap: pretty; }
+  .legal strong { color: var(--ink); font-weight: 600; }
+  .legal a { color: var(--ink-soft); }
+  .legal a:hover { color: var(--accent); }
+  .colophon {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+  }
 
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
+  /* ---------- motion -------------------------------------------------------
+     Opted into rather than switched off. Turning motion off under
+     prefers-reduced-motion needs !important to beat the rules that declared it;
+     declaring it only under no-preference needs nothing at all. */
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+    .bar { transition: border-color .2s; }
+    #mode, .copy { transition: color .15s, border-color .15s; }
+    .menu button, .vibes button { transition: color .15s, background .15s, border-color .15s; }
+    .stage { transition: box-shadow .3s; }
+    .cursor { animation: blink 1.1s steps(1, end) infinite; }
   }
 </style>
 </head>
 <body>
 
-<header>
+<div class="bar" id="bar">
   <div class="wrap">
-    <p class="eyebrow">for the Claude Code terminal</p>
-    <h1>Themes that <span class="moves">move</span>.</h1>
-    <p class="lede">
-      Animated backdrops that paint behind your conversation — rain, petals, snowfall.
-      Three ship with it. The rest you design by describing them.
-    </p>
+    <a class="brand" href="#top"><span class="star">✻</span> claude-code-scenes</a>
+    <a class="link" href="https://www.npmjs.com/package/claude-code-scenes">npm</a>
+    <a class="link" href="https://github.com/rezathepure/claude-code-scenes">GitHub</a>
+    <button id="mode" type="button" aria-label="Switch between light and dark">☾</button>
+  </div>
+</div>
 
-    <div class="demo">
-      <div class="demo-bar">
-        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-        <span class="demo-title">ccs</span>
+<header id="top">
+  <div class="wrap">
+    <p class="eyebrow"><span class="star">✻</span> for the terminal you already live in</p>
+    <h1>A fun Claude Code CLI with <em>animated themes</em></h1>
+    <p class="lede">Prompt it, and it builds you your own.</p>
+
+    <figure class="hero-media">
+      <div class="media">
+        <video autoplay muted loop playsinline preload="metadata"
+               poster="assets/demo/demo.png"
+               aria-label="A terminal session: matrix rain runs behind the prompt, /theme opens the picker, Create your own takes a description — winter vibe, snowfall and a snowman — and the finished theme paints snow behind the conversation.">
+          <source src="assets/demo/demo.mp4" type="video/mp4">
+          <img src="assets/demo/demo.gif" alt="A terminal session: matrix rain runs behind the prompt, /theme opens the picker, Create your own takes a description, and the finished theme paints snow behind the conversation.">
+        </video>
       </div>
-      <div class="stage">
-        <img id="s-matrix"  src="assets/scenes/matrix.svg"  alt="The matrix theme: green katakana falling in columns down a dark terminal.">
-        <img id="s-sakura"  src="assets/scenes/sakura.svg"  alt="The sakura theme: pink cherry blossom petals drifting down a dark terminal." hidden>
-        <img id="s-winter"  src="assets/scenes/winter.svg"  alt="The winter theme: ice-blue snow falling past a snowman in a lantern-lit yard." hidden>
-      </div>
-    </div>
-
-    <ul class="switch" role="tablist" aria-label="Choose a theme to preview">
-      <li><button role="tab" aria-selected="true"  data-theme="matrix"  data-label="rain">matrix</button></li>
-      <li><button role="tab" aria-selected="false" data-theme="sakura"  data-label="petals">sakura</button></li>
-      <li><button role="tab" aria-selected="false" data-theme="winter"  data-label="snowman yard">winter</button></li>
-    </ul>
-    <p class="caption" id="caption"></p>
-
-    <div class="install">
-      <span class="cmd"><span class="prompt">$ </span>npm i -g claude-code-scenes</span>
-      <a class="ghost" href="https://github.com/rezathepure/claude-code-scenes">Source on GitHub →</a>
-    </div>
+      <figcaption>
+        Recorded from the real interface, over the real scene engine — not a mockup.
+      </figcaption>
+    </figure>
   </div>
 </header>
 
-<section id="gallery">
+<section id="install">
   <div class="wrap">
-    <h2>Three to start with</h2>
-    <p class="section-lede">
-      Deliberately few. Each is a plain JSON file written to <code>~/.claude/ccs</code>
-      the first time you run it — the same format anything you design lands in. Edit
-      one in place, or delete it and it stays deleted.
+    <p class="eyebrow">install</p>
+    <h2>Two lines.</h2>
+    <p class="section-lede">Node 20 or newer. Nothing else to configure.</p>
+
+    <div class="term" style="max-width: 34rem">
+      <button class="copy" type="button" data-copy="npm i -g claude-code-scenes&#10;ccs">copy</button>
+      <pre><span class="sh">$ </span>npm i -g claude-code-scenes
+<span class="sh">$ </span>ccs</pre>
+    </div>
+
+    <p class="after-cmd">
+      Then <code>/theme</code> to pick one, or <code>/theme create "a vibe"</code> to
+      design your own.
     </p>
+  </div>
+</section>
 
-    <div class="grid">
-      <article class="card">
-        <img src="assets/scenes/matrix.svg" alt="matrix theme preview" loading="lazy">
-        <div class="card-body">
-          <h3>matrix <span class="kind">· rain</span></h3>
-          <p>Phosphor-green terminal. One hue with discipline.</p>
+<section id="starters">
+  <div class="wrap">
+    <p class="eyebrow">bundled</p>
+    <h2>The three starters</h2>
+    <p class="section-lede">Three ship with it. Everything else you prompt for.</p>
+
+    <div class="picker">
+      <div>
+        <ul class="menu" role="tablist" aria-label="Starter themes">
+          <li>
+            <button role="tab" type="button" id="tab-matrix" aria-selected="true" aria-controls="p-matrix" tabindex="0"
+                    data-theme="matrix" data-glow="0,255,65"
+                    data-desc="Phosphor-green terminal. One hue with discipline.">
+              <span class="caret">❯</span>matrix <span class="chip">✦ rain</span>
+            </button>
+          </li>
+          <li>
+            <button role="tab" type="button" id="tab-sakura" aria-selected="false" aria-controls="p-sakura" tabindex="-1"
+                    data-theme="sakura" data-glow="255,138,190"
+                    data-desc="A cherry-blossom night. Sakura pink leads, honey pays the bills.">
+              <span class="caret">❯</span>sakura <span class="chip">✦ petals</span>
+            </button>
+          </li>
+          <li>
+            <button role="tab" type="button" id="tab-winter" aria-selected="false" aria-controls="p-winter" tabindex="-1"
+                    data-theme="winter" data-glow="158,206,246"
+                    data-desc="Snow past a lantern-lit yard. Icy blue leads, one warm ember.">
+              <span class="caret">❯</span>winter <span class="chip">✦ snowfall</span>
+            </button>
+          </li>
+        </ul>
+        <p class="menu-hint">↑↓ to move</p>
+        <p class="stage-desc" id="stage-desc" aria-live="polite"></p>
+      </div>
+
+      <div>
+        <div class="media stage" id="stage">
+          <img id="p-matrix" role="tabpanel" aria-labelledby="tab-matrix" data-on
+               src="assets/demo/matrix.gif" data-still="assets/demo/matrix.png"
+               alt="The matrix theme: green katakana falling in columns behind the prompt.">
+          <img id="p-sakura" role="tabpanel" aria-labelledby="tab-sakura" loading="lazy"
+               src="assets/demo/sakura.gif" data-still="assets/demo/sakura.png"
+               alt="The sakura theme: pink petals drifting across a dark terminal.">
+          <img id="p-winter" role="tabpanel" aria-labelledby="tab-winter" loading="lazy"
+               src="assets/demo/winter.gif" data-still="assets/demo/winter.png"
+               alt="The winter theme: snow falling past a lantern-lit yard, with a snowman on patrol.">
         </div>
-      </article>
-
-      <article class="card">
-        <img src="assets/scenes/sakura.svg" alt="sakura theme preview" loading="lazy">
-        <div class="card-body">
-          <h3>sakura <span class="kind">· petals</span></h3>
-          <p>A cherry-blossom night. Sakura pink leads, honey pays the bills.</p>
-        </div>
-      </article>
-
-      <article class="card">
-        <img src="assets/scenes/winter.svg" alt="winter theme preview" loading="lazy">
-        <div class="card-body">
-          <h3>winter <span class="kind">· snowman yard</span></h3>
-          <p>A quiet snowfall over a lantern-lit yard. Icy blue leads, a warm ember keeps you company.</p>
-        </div>
-      </article>
-
+      </div>
     </div>
   </div>
 </section>
 
 <section id="design">
   <div class="wrap">
-    <h2>Or describe one</h2>
-    <p class="section-lede">
-      <code>/theme create</code> hands your description to the model, which designs the
-      palette and the animation together. You review it before it is written anywhere.
-    </p>
+    <p class="eyebrow">/theme create</p>
+    <h2>Designing one</h2>
+    <p class="section-lede">Two ways in. Both land in the same place.</p>
 
-    <div class="steps">
-      <div class="step">
-        <span class="n">1</span>
-        <div>
-          <h3>Say what you want</h3>
-          <p>A mood is enough. These are the examples the prompt box offers:</p>
-          <ul class="vibes">
-            <li>cyberpunk thunderstorm</li>
-            <li>moody vampire castle</li>
-            <li>autumn library at dusk</li>
-            <li>sakura in moonlight</li>
-            <li>phosphor terminal, 1984</li>
-            <li>sunlit sea glass</li>
-          </ul>
+    <div class="routes">
+      <div>
+        <p class="route-label">If you already know the vibe, say it outright</p>
+        <div class="term">
+          <div class="box">
+            <span class="caret" aria-hidden="true">❯</span><span id="typed"></span><span class="cursor" aria-hidden="true"></span>
+          </div>
         </div>
+        <ul class="vibes" aria-label="Example descriptions, the ones the prompt box itself offers">
+          <li><button type="button">cyberpunk thunderstorm</button></li>
+          <li><button type="button">moody vampire castle</button></li>
+          <li><button type="button">autumn library at dusk</button></li>
+          <li><button type="button">sakura in moonlight</button></li>
+          <li><button type="button">phosphor terminal, 1984</button></li>
+          <li><button type="button">sunlit sea glass</button></li>
+        </ul>
       </div>
 
-      <div class="step">
-        <span class="n">2</span>
-        <div>
-          <h3>Watch it before you keep it</h3>
-          <p>
-            The draft is registered live and previewed two ways — the backdrop
-            animating at full size, and a scripted session that exercises about
-            fifteen colour slots so you can see what real output looks like.
-          </p>
-        </div>
-      </div>
-
-      <div class="step">
-        <span class="n">3</span>
-        <div>
-          <h3>Change it in plain language</h3>
-          <p>
-            “slower”. “add drifting embers”. “calmer warnings”. Each refinement returns
-            a delta, so anything you did not mention stays exactly as it was — and you
-            can undo.
-          </p>
+      <div>
+        <p class="route-label">If you would rather look first — the flow in the demo above</p>
+        <div class="term">
+          <pre><span class="slash">/theme</span><span class="arrow">→</span>✦ Create your own<span class="arrow">→</span>describe it</pre>
         </div>
       </div>
     </div>
 
-    <p class="note">
-      <strong>The renderer ships once; the model ships content.</strong>
-      An animation is described entirely in the theme's JSON — layers, motion verbs,
-      glyph catalogues, one arithmetic expression for rhythm. That is what lets a
-      binary you installed from npm produce an animation nobody wrote into it.
-      Nothing in a theme file is ever executed: no <code>eval</code>, no
-      <code>Function</code>, no property access — just a hand-written parser with hard
-      caps and a fuzz test.
+    <p class="prose" style="margin-top: 2rem">
+      One generation, then a loop. You get two views of the draft — the backdrop
+      animating at full size, and a scripted session exercising about fifteen
+      colour slots — and either accepts a change in plain language:
+      <em>“slower”</em>, <em>“add drifting embers”</em>, <em>“calmer warnings”</em>.
+      Refinements return a delta, so anything you did not mention stays as it
+      was, and you can undo. Nothing is written to disk until you keep it.
     </p>
   </div>
 </section>
 
-<footer>
+<section id="notes">
   <div class="wrap">
-    <p>
-      <strong>Not affiliated with Anthropic.</strong>
-      “Claude”, “Claude Code” and “Anthropic” belong to
-      <a href="https://www.anthropic.com/">Anthropic PBC</a>, and all rights in Claude
-      Code and the Claude models are theirs. If you want the supported, official tool,
-      use <a href="https://docs.anthropic.com/en/docs/claude-code">Anthropic's Claude Code</a>.
+    <p class="eyebrow">good to know</p>
+    <h2>Notes</h2>
+
+    <ul class="notes">
+      <li>
+        <p>
+          <strong>Animations need the alternate screen buffer</strong>, which is on by
+          default. If you prefer inline rendering, <code>/tui off</code> turns it off
+          permanently — themes still apply their colours, they just stop moving.
+        </p>
+      </li>
+      <li>
+        <p>
+          <strong>Theme files are meant to be shared, so nothing in one is ever
+          executed.</strong> Shader expressions go through a hand-written lexer and
+          parser — no <code>eval</code>, no <code>Function</code> constructor, no
+          property access — under hard caps, with a fuzz test.
+          <span class="sub">Details in <a href="https://github.com/rezathepure/claude-code-scenes/blob/main/docs/features/theme-scenes.md">docs/features/theme-scenes.md</a>.</span>
+        </p>
+      </li>
+      <li>
+        <p>
+          <strong>Install-time behaviour.</strong> <code>postinstall</code> downloads a
+          ripgrep binary from GitHub releases for the search tools.
+          <code>CLAUDE_CODE_SKIP_POSTINSTALL=1</code> skips it;
+          <code>RIPGREP_DOWNLOAD_BASE</code> points it elsewhere. Chrome integration is
+          opt-in via <code>CLAUDE_CODE_SETUP_CHROME_MCP=1</code> and does nothing
+          otherwise.
+        </p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section id="source">
+  <div class="wrap">
+    <p class="eyebrow">contributing</p>
+    <h2>Building from source</h2>
+    <p class="section-lede">Needs <a href="https://bun.sh">Bun</a> ≥ 1.3.11.</p>
+
+    <div class="term" style="max-width: 42rem">
+      <button class="copy" type="button" data-copy="bun install&#10;bun run dev&#10;bun run precheck">copy</button>
+      <pre><span class="sh">$ </span>bun install
+<span class="sh">$ </span>bun run dev              <span class="cm"># run it</span>
+<span class="sh">$ </span>bun run precheck         <span class="cm"># typecheck + lint + test</span>
+<span class="sh">$ </span>bun run capture:scenes   <span class="cm"># regenerate the scene assets from the engine</span></pre>
+    </div>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap">
+    <p class="eyebrow">privacy</p>
+    <h2>Where your data goes</h2>
+    <p class="section-lede">
+      Short version: to your model provider, and nowhere else. This project runs no
+      servers, has no account, and collects nothing for itself.
     </p>
+
+    <ul class="notes">
+      <li>
+        <p>
+          <strong>Your prompts, code and conversations</strong> go to whichever provider
+          you have configured — Anthropic by default, or OpenAI, Gemini, Grok, Bedrock
+          or Vertex if you set one up. That traffic is between you and them, under their
+          terms. It is not proxied through anything belonging to this project, and no
+          copy is kept anywhere.
+        </p>
+      </li>
+      <li>
+        <p>
+          <strong>Themes never leave your machine.</strong> They are ordinary JSON files
+          on disk. Designing one sends your description — <em>“winter vibe,
+          snowfall”</em> — to the same provider that answers your prompts, and nothing
+          else.
+        </p>
+      </li>
+      <li>
+        <p>
+          <strong>Off until you turn them on:</strong> crash reporting (needs
+          <code>SENTRY_DSN</code>), web search, and artifact publishing (needs a host you
+          choose). None has a default destination.
+        </p>
+      </li>
+      <li>
+        <p>
+          <strong>At install time</strong> a ripgrep binary is downloaded from GitHub
+          releases for the search tools. That is a download, not an upload;
+          <code>CLAUDE_CODE_SKIP_POSTINSTALL=1</code> skips it.
+        </p>
+      </li>
+      <li>
+        <p>
+          <strong>No feature-flag calls.</strong> Upstream's client fetched configuration
+          at every startup, carrying a device id and your account identifiers. It is off
+          here unless you point it at a server of your own.
+        </p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<footer class="legal">
+  <div class="wrap">
+    <h2>What this is, and what it is not</h2>
+
     <p>
-      This is a fork of
-      <a href="https://github.com/claude-code-best/claude-code">claude-code-best/claude-code</a>,
-      an independent reverse-engineered reproduction that is not Anthropic's official
-      distribution. The animated-theme work is what this fork adds. Bring your own API
-      credentials; you pay for your own usage. Provided as-is, with no warranty.
+      A fork of
+      <a href="https://github.com/claude-code-best/claude-code">claude-code-best/claude-code</a>
+      — an independent reverse-engineered reproduction of Claude Code, <strong>not</strong>
+      Anthropic's official distribution — that adds one thing: <strong>animations that
+      paint behind your conversation</strong>, and a way to invent new ones by describing
+      what you want. The animation lives entirely in the theme's JSON file, so no code
+      ships for it. That is what lets a binary you installed from npm produce an
+      animation nobody wrote into it.
     </p>
+
     <p>
-      <a href="https://github.com/rezathepure/claude-code-scenes/blob/main/NOTICE.md">Full notice and licensing</a>
-      ·
+      Not affiliated with, endorsed by, or sponsored by Anthropic. “Claude”, “Claude
+      Code” and “Anthropic” belong to <a href="https://www.anthropic.com/">Anthropic PBC</a>,
+      and all rights in Claude Code and the Claude models are theirs. If you want the
+      supported, official tool, use
+      <a href="https://docs.anthropic.com/en/docs/claude-code">Anthropic's Claude Code</a>.
+    </p>
+
+    <p>
+      The animated-theme work is what this fork adds; it is MIT-licensed under
+      <a href="https://github.com/rezathepure/claude-code-scenes/blob/main/LICENSE-SCENES">LICENSE-SCENES</a>,
+      scoped by explicit path list. There is deliberately no repository-wide licence —
+      the reasoning is in
+      <a href="https://github.com/rezathepure/claude-code-scenes/blob/main/NOTICE.md">NOTICE.md</a>,
+      which you should read before forking or redistributing. Provided as-is, with no
+      warranty.
+    </p>
+
+    <div class="colophon">
       <a href="https://github.com/rezathepure/claude-code-scenes">GitHub</a>
-    </p>
+      <span aria-hidden="true">·</span>
+      <a href="https://www.npmjs.com/package/claude-code-scenes">npm</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://github.com/rezathepure/claude-code-scenes/issues">Issues</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://github.com/rezathepure/claude-code-scenes/blob/main/NOTICE.md">Notice &amp; licensing</a>
+    </div>
   </div>
 </footer>
 
+<noscript><style>.stage img { display: block; } .cursor { display: none; }</style></noscript>
+
 <script>
-  // Preview switching. Each theme is its own <img>, so the browser runs the
-  // SVG's CSS timeline for us and there is no animation loop to write.
-  (function () {
-    var caption = document.getElementById('caption');
-    var buttons = Array.prototype.slice.call(
-      document.querySelectorAll('.switch button')
-    );
+{
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    function show(name, label) {
-      buttons.forEach(function (b) {
-        var on = b.dataset.theme === name;
-        b.setAttribute('aria-selected', String(on));
-        var img = document.getElementById('s-' + b.dataset.theme);
-        if (img) img.hidden = !on;
-      });
-      caption.innerHTML = '<span class="label">' + name + '</span> · ' + label;
+  /* ---- light / dark ---------------------------------------------------- */
+
+  const mode = document.getElementById('mode')
+
+  const paintToggle = () => {
+    const dark = document.documentElement.dataset.theme !== 'light'
+    mode.textContent = dark ? '☾' : '☀'
+    mode.setAttribute('aria-pressed', String(dark))
+  }
+
+  mode.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'
+    document.documentElement.dataset.theme = next
+    try { localStorage.setItem('ccs-theme', next) } catch { /* private mode */ }
+    paintToggle()
+  })
+  paintToggle()
+
+  /* ---- the bar's hairline, once you have left the top ------------------- */
+
+  const bar = document.getElementById('bar')
+  addEventListener('scroll', () => bar.classList.toggle('scrolled', scrollY > 8), { passive: true })
+
+  /* ---- copy -------------------------------------------------------------
+     execCommand as well as the clipboard API: the latter needs a secure
+     context, and a button that silently does nothing over plain http is worse
+     than the deprecated call. */
+
+  const legacyCopy = text => {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.setAttribute('readonly', '')
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0'
+    document.body.appendChild(ta)
+    ta.select()
+    let ok = false
+    try { ok = document.execCommand('copy') } catch { /* nothing left to try */ }
+    ta.remove()
+    return ok
+  }
+
+  for (const btn of document.querySelectorAll('.copy')) {
+    btn.addEventListener('click', () => {
+      const done = () => {
+        btn.textContent = 'copied'
+        btn.dataset.done = '1'
+        setTimeout(() => { btn.textContent = 'copy'; btn.dataset.done = '0' }, 1600)
+      }
+      const fallback = () => { if (legacyCopy(btn.dataset.copy)) done() }
+      if (navigator.clipboard) navigator.clipboard.writeText(btn.dataset.copy).then(done, fallback)
+      else fallback()
+    })
+  }
+
+  /* ---- the starter picker ------------------------------------------------
+     A tablist rather than a row of links: arrows move, which is how the same
+     menu behaves inside the tool. Reduced motion swaps each loop for the still
+     frame captured alongside it. */
+
+  const tabs = [...document.querySelectorAll('.menu [role="tab"]')]
+  const stage = document.getElementById('stage')
+  const desc = document.getElementById('stage-desc')
+
+  if (reduced) {
+    for (const img of stage.querySelectorAll('img[data-still]')) img.src = img.dataset.still
+  }
+
+  const select = (tab, focus) => {
+    for (const t of tabs) {
+      const on = t === tab
+      t.setAttribute('aria-selected', String(on))
+      t.tabIndex = on ? 0 : -1
+      document.getElementById(t.getAttribute('aria-controls')).toggleAttribute('data-on', on)
     }
+    const rgb = tab.dataset.glow
+    stage.style.boxShadow =
+      `0 0 0 1px rgba(${rgb},.22), 0 22px 55px -30px rgba(${rgb},.28), 0 1px 2px rgba(0,0,0,.06)`
+    desc.textContent = tab.dataset.desc
+    if (focus) tab.focus()
+  }
 
-    buttons.forEach(function (b) {
-      b.addEventListener('click', function () {
-        show(b.dataset.theme, b.dataset.label);
-      });
-    });
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => select(tab))
+    tab.addEventListener('keydown', e => {
+      const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key]
+      if (step) { e.preventDefault(); select(tabs[(i + step + tabs.length) % tabs.length], true) }
+      else if (e.key === 'Home') { e.preventDefault(); select(tabs[0], true) }
+      else if (e.key === 'End') { e.preventDefault(); select(tabs.at(-1), true) }
+    })
+  })
+  select(tabs[0])
 
-    show('matrix', 'rain');
-  })();
+  /* ---- the prompt box ----------------------------------------------------
+     The six examples are the ones the real prompt box offers. It rotates until
+     you pick one yourself, then stops and stays on your choice. */
+
+  const typed = document.getElementById('typed')
+  const chips = [...document.querySelectorAll('.vibes button')]
+  const show = vibe => { typed.textContent = `/theme create "${vibe}"` }
+
+  let timer = null
+  let at = 0
+
+  for (const chip of chips) {
+    chip.addEventListener('click', () => {
+      clearInterval(timer)
+      show(chip.textContent)
+    })
+  }
+
+  show(chips[0].textContent)
+  if (!reduced) {
+    timer = setInterval(() => {
+      at = (at + 1) % chips.length
+      show(chips[at].textContent)
+    }, 3200)
+  }
+
+  /* ---- the hero ----------------------------------------------------------
+     Autoplay is in the markup so it works without this script at all; reduced
+     motion undoes it and hands the controls over instead. */
+
+  const video = document.querySelector('.hero-media video')
+  if (reduced && video) {
+    video.pause()
+    video.removeAttribute('autoplay')
+    video.controls = true
+  }
+}
 </script>
 
 </body>
