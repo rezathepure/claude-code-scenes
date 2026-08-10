@@ -30,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # `bun install` no longer fetches this — the binaries are vendored at
+      # publish time so an install runs no scripts. The search tools still need
+      # one here, and only this runner's target.
+      - name: Vendor ripgrep for this runner
+        run: bun run vendor:ripgrep
+
       - name: Lint and format check
         run: bunx biome ci .
 

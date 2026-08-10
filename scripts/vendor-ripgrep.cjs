@@ -1,14 +1,22 @@
 #!/usr/bin/env node
 /**
- * Postinstall script — runs automatically after `bun install` or `npm install`.
+ * Vendors the ripgrep binaries the search tools shell out to.
  *
- * Downloads ripgrep binary (idempotent, skips if exists).
- * Works in dev mode (src/ exists), published mode (dist/ exists), with bun or node.
+ * This used to be an npm `postinstall` hook, which meant every install both
+ * ran a script and reached out to GitHub. Now the binaries are downloaded
+ * once at publish time and travel inside the tarball, so installing the
+ * package executes nothing and touches no network beyond the registry. That
+ * costs ~13 MB and buys an install that works offline, behind the GFW, and
+ * under any `--ignore-scripts` or `allow-scripts` policy npm adopts next.
+ *
+ * Idempotent: an existing non-empty binary is left alone unless --force.
+ * Writes to src/utils/vendor/ripgrep/ in a checkout (post-build copies it to
+ * dist/vendor/ripgrep/), or straight to dist/vendor/ripgrep/ without one.
  *
  * Usage:
- *   node scripts/postinstall.js
- *   node scripts/postinstall.js --force
- *   bun run scripts/postinstall.js
+ *   node scripts/vendor-ripgrep.cjs          # this machine's target only
+ *   node scripts/vendor-ripgrep.cjs --all    # every target, for publishing
+ *   node scripts/vendor-ripgrep.cjs --force  # re-download
  */
 
 const {
@@ -57,50 +65,63 @@ const RELEASE_BASE = (
 const scriptDir = path.dirname(__filename)
 const projectRoot = path.resolve(scriptDir, '..')
 
-// --- Platform mapping ---
+// --- Targets ---
 
-function getPlatformMapping() {
-  const arch = process.arch
-  const platform = process.platform
+/**
+ * `dir` is `${process.arch}-${process.platform}`, which is exactly what
+ * src/utils/ripgrep.ts computes at runtime. One directory holds one binary,
+ * so each platform/arch pair gets exactly one entry here.
+ *
+ * Linux takes the musl builds on both architectures. They are statically
+ * linked, so they run on glibc distributions too — which is why x64 has always
+ * used musl unconditionally. Extending that to arm64 costs a marginally slower
+ * allocator and removes the need to guess the host's libc, a guess that cannot
+ * be made at all when the binaries are vendored on someone else's machine.
+ */
+const TARGETS = [
+  {
+    dir: 'arm64-darwin',
+    target: 'aarch64-apple-darwin',
+    ext: 'tar.gz',
+    bin: 'rg',
+  },
+  {
+    dir: 'x64-darwin',
+    target: 'x86_64-apple-darwin',
+    ext: 'tar.gz',
+    bin: 'rg',
+  },
+  {
+    dir: 'arm64-linux',
+    target: 'aarch64-unknown-linux-musl',
+    ext: 'tar.gz',
+    bin: 'rg',
+  },
+  {
+    dir: 'x64-linux',
+    target: 'x86_64-unknown-linux-musl',
+    ext: 'tar.gz',
+    bin: 'rg',
+  },
+  {
+    dir: 'arm64-win32',
+    target: 'aarch64-pc-windows-msvc',
+    ext: 'zip',
+    bin: 'rg.exe',
+  },
+  {
+    dir: 'x64-win32',
+    target: 'x86_64-pc-windows-msvc',
+    ext: 'zip',
+    bin: 'rg.exe',
+  },
+]
 
-  if (platform === 'darwin') {
-    if (arch === 'arm64')
-      return { target: 'aarch64-apple-darwin', ext: 'tar.gz' }
-    if (arch === 'x64') return { target: 'x86_64-apple-darwin', ext: 'tar.gz' }
-    throw new Error(`Unsupported macOS arch: ${arch}`)
-  }
-
-  if (platform === 'win32') {
-    if (arch === 'x64') return { target: 'x86_64-pc-windows-msvc', ext: 'zip' }
-    if (arch === 'arm64')
-      return { target: 'aarch64-pc-windows-msvc', ext: 'zip' }
-    throw new Error(`Unsupported Windows arch: ${arch}`)
-  }
-
-  if (platform === 'linux') {
-    const isMusl = detectMusl()
-    if (arch === 'x64') {
-      return { target: 'x86_64-unknown-linux-musl', ext: 'tar.gz' }
-    }
-    if (arch === 'arm64') {
-      return isMusl
-        ? { target: 'aarch64-unknown-linux-musl', ext: 'tar.gz' }
-        : { target: 'aarch64-unknown-linux-gnu', ext: 'tar.gz' }
-    }
-    throw new Error(`Unsupported Linux arch: ${arch}`)
-  }
-
-  throw new Error(`Unsupported platform: ${platform}`)
-}
-
-function detectMusl() {
-  const muslArch = process.arch === 'x64' ? 'x86_64' : 'aarch64'
-  try {
-    statSync(`/lib/libc.musl-${muslArch}.so.1`)
-    return true
-  } catch {
-    return false
-  }
+function hostTarget() {
+  const dir = `${process.arch}-${process.platform}`
+  const entry = TARGETS.find(t => t.dir === dir)
+  if (!entry) throw new Error(`Unsupported platform: ${dir}`)
+  return entry
 }
 
 // --- Paths ---
@@ -112,11 +133,8 @@ function getVendorDir() {
   return path.resolve(projectRoot, 'dist', 'vendor', 'ripgrep')
 }
 
-function getBinaryPath() {
-  const dir = getVendorDir()
-  const subdir = `${process.arch}-${process.platform}`
-  const binary = process.platform === 'win32' ? 'rg.exe' : 'rg'
-  return path.resolve(dir, subdir, binary)
+function getBinaryPath(entry) {
+  return path.resolve(getVendorDir(), entry.dir, entry.bin)
 }
 
 // --- Download helpers ---
@@ -318,25 +336,24 @@ async function extractTarGz(buffer, binaryPath, extractedBinary, assetName) {
 
 // --- Main ---
 
-async function downloadAndExtract() {
-  const { target, ext } = getPlatformMapping()
+async function downloadAndExtract(entry, force) {
+  const { target, ext } = entry
   const assetName = `ripgrep-v${RG_VERSION}-${target}.${ext}`
 
-  const binaryPath = getBinaryPath()
+  const binaryPath = getBinaryPath(entry)
   const binaryDir = path.dirname(binaryPath)
 
-  const force = process.argv.includes('--force')
   if (!force && existsSync(binaryPath)) {
     const stat = statSync(binaryPath)
     if (stat.size > 0) {
-      console.log(`[ripgrep] Binary already exists at ${binaryPath}, skipping.`)
+      console.log(`[ripgrep] ${entry.dir} already vendored, skipping.`)
       return
     }
   }
 
   console.log(`[ripgrep] Downloading v${RG_VERSION} for ${target}...`)
 
-  const extractedBinary = process.platform === 'win32' ? 'rg.exe' : 'rg'
+  const extractedBinary = entry.bin
 
   // Exactly one source: whatever RELEASE_BASE resolved to. See its definition
   // for why there is no automatic fallback to a mirror.
@@ -372,7 +389,9 @@ async function downloadAndExtract() {
       await extractZip(buffer, binaryPath, extractedBinary)
     }
 
-    if (process.platform !== 'win32') {
+    // Keyed off the target, not the host: vendoring the Linux binaries from a
+    // Mac still has to leave them executable inside the tarball.
+    if (entry.bin !== 'rg.exe') {
       chmodSync(binaryPath, 0o755)
     }
 
@@ -386,9 +405,9 @@ async function downloadAndExtract() {
 }
 
 async function main() {
-  // Offline, air-gapped and reproducible-build installs need a way to say
-  // "download nothing". Without this the only lever was breaking the network
-  // and waiting for the retries to give up.
+  // Offline and air-gapped checkouts need a way to say "download nothing".
+  // Without this the only lever was breaking the network and waiting for the
+  // retries to give up.
   if (process.env.CLAUDE_CODE_SKIP_POSTINSTALL === '1') {
     console.log(
       '[ripgrep] CLAUDE_CODE_SKIP_POSTINSTALL=1 — skipping download. ' +
@@ -396,15 +415,23 @@ async function main() {
     )
     return
   }
-  await downloadAndExtract()
+
+  const force = process.argv.includes('--force')
+  const all = process.argv.includes('--all')
+  const targets = all ? TARGETS : [hostTarget()]
+
+  for (const entry of targets) {
+    await downloadAndExtract(entry, force)
+  }
 }
 
 main().catch(error => {
   const msg = error instanceof Error ? error.message : String(error)
-  console.error(`[postinstall] ripgrep download failed (non-fatal): ${msg}`)
+  console.error(`[ripgrep] vendoring failed: ${msg}`)
   console.error(
-    `[postinstall] You can install ripgrep manually: https://github.com/BurntSushi/ripgrep#installation`,
+    '[ripgrep] Install ripgrep manually if you need it now: https://github.com/BurntSushi/ripgrep#installation',
   )
-  // Never exit with error code — postinstall must not break install
-  process.exit(0)
+  // A publish must not ship a package missing binaries, so unlike the old
+  // postinstall this exits non-zero and lets the caller decide.
+  process.exit(1)
 })

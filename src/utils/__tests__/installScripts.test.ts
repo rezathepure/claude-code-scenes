@@ -25,14 +25,31 @@ describe('nothing touches the browser at install time', () => {
     )
   })
 
-  test('postinstall downloads ripgrep and does nothing else', () => {
+  test('installing the package runs nothing at all', () => {
     // The README and the landing page both state this outright. Keep them true.
-    expect(manifest.scripts.postinstall).toBe('node scripts/postinstall.cjs')
-  })
-
-  test('no other lifecycle script runs on install', () => {
-    for (const name of ['preinstall', 'install', 'prepublish']) {
+    //
+    // ripgrep used to arrive via postinstall; it is vendored into the tarball
+    // at publish time instead. `prepare` used to install husky's git hooks;
+    // that moved to `bun run hooks`, which contributors run once. npm skips
+    // `prepare` for registry installs anyway, but "npm happens not to run it"
+    // is a weaker guarantee than not declaring it, and this is the list npm
+    // reads to decide whether to warn.
+    const install = [
+      'preinstall',
+      'install',
+      'postinstall',
+      'prepare',
+      'prepublish',
+    ]
+    for (const name of install) {
       expect(manifest.scripts[name]).toBeUndefined()
     }
+  })
+
+  test('the ripgrep binaries are not excluded from the tarball', () => {
+    // A stray negation here ships a package whose search tools cannot run,
+    // and npm reports no error — the files simply are not there.
+    expect(manifest.files).toContain('dist')
+    expect(manifest.files.some((f: string) => f.startsWith('!'))).toBe(false)
   })
 })

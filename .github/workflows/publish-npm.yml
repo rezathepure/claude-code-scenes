@@ -54,6 +54,12 @@ jobs:
       #
       # `prepublishOnly` still runs and rebuilds; that is deterministic from
       # the same source, and keeps a manual `npm publish` safe.
+      # Every ripgrep target, not just this runner's. They ship inside the
+      # tarball so that installing the package runs no scripts and needs no
+      # network beyond the registry; see scripts/vendor-ripgrep.cjs.
+      - name: Vendor ripgrep for every target
+        run: bun run vendor:ripgrep:all
+
       - name: Build publish artifact
         run: bun run build:vite
 
@@ -62,6 +68,18 @@ jobs:
           npm -v # trusted publishing needs npm >= 11.5.1
           node dist/cli-node.js --version
           test -f dist/cli-bun.js
+
+      # A tarball missing a platform's binary looks fine on the runner and
+      # breaks search for whoever installs it, so fail here rather than there.
+      - name: Every platform's ripgrep is in the artifact
+        run: |
+          for d in arm64-darwin x64-darwin arm64-linux x64-linux; do
+            test -x "dist/vendor/ripgrep/$d/rg" || { echo "missing dist/vendor/ripgrep/$d/rg"; exit 1; }
+          done
+          for d in arm64-win32 x64-win32; do
+            test -s "dist/vendor/ripgrep/$d/rg.exe" || { echo "missing dist/vendor/ripgrep/$d/rg.exe"; exit 1; }
+          done
+          du -sh dist/vendor/ripgrep
 
       # npm rejects republishing a version that already exists, so a tag for a
       # version published by hand would fail the whole run and leave a red mark

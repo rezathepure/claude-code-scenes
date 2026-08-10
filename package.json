@@ -45,10 +45,8 @@
   ],
   "files": [
     "dist",
-    "!dist/vendor/ripgrep/**",
     "NOTICE.md",
-    "LICENSE-SCENES",
-    "scripts/postinstall.cjs"
+    "LICENSE-SCENES"
   ],
   "scripts": {
     "build": "bun run build.ts",
@@ -60,13 +58,15 @@
     "capture:scenes": "bun run scripts/capture-scene.ts && bun run scripts/render-scene-svg.ts",
     "capture:demo": "bun run scripts/render-with-defines.ts scripts/capture-demo.tsx",
     "capture:starters": "bun run scripts/render-with-defines.ts scripts/capture-starters.tsx",
-    "prepublishOnly": "bun run build:vite",
+    "vendor:ripgrep": "node scripts/vendor-ripgrep.cjs",
+    "vendor:ripgrep:all": "node scripts/vendor-ripgrep.cjs --all",
+    "prepublishOnly": "bun run vendor:ripgrep:all && bun run build:vite",
     "lint": "biome lint .",
     "lint:fix": "biome lint --fix .",
     "format": "biome format --write .",
     "check": "biome check .",
     "check:fix": "biome check --fix .",
-    "prepare": "husky",
+    "hooks": "husky",
     "test": "bun test",
     "test:production": "bun run scripts/production-test.ts",
     "test:production:offline": "bun run scripts/production-test.ts --offline",
@@ -75,7 +75,6 @@
     "check:bundle": "bun run scripts/check-bundle-integrity.ts",
     "check:unused": "knip-bun",
     "health": "bun run scripts/health-check.ts",
-    "postinstall": "node scripts/postinstall.cjs",
     "typecheck": "tsc --noEmit",
     "precheck": "bun run typecheck && bun run check:fix && bun test",
     "rcs": "bun run scripts/rcs.ts",

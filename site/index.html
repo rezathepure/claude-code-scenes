@@ -606,11 +606,12 @@
       </li>
       <li>
         <p>
-          <strong>Install-time behaviour.</strong> <code>postinstall</code> downloads a
-          ripgrep binary from GitHub releases for the search tools, and does nothing
-          else — nothing is registered with your browser, and no other package here
-          runs an install script. <code>CLAUDE_CODE_SKIP_POSTINSTALL=1</code> skips it;
-          <code>RIPGREP_DOWNLOAD_BASE</code> points it elsewhere.
+          <strong>Installing runs nothing.</strong> No <code>postinstall</code>, no
+          lifecycle scripts of any kind, and no network beyond the registry itself.
+          The ripgrep binaries the search tools need travel inside the package — all
+          six platforms — rather than being fetched on your machine, so an install
+          works offline, behind a firewall, and under <code>--ignore-scripts</code>.
+          It costs about 13&nbsp;MB.
         </p>
       </li>
     </ul>
@@ -624,8 +625,10 @@
     <p class="section-lede">Needs <a href="https://bun.sh">Bun</a> ≥ 1.3.11.</p>
 
     <div class="term" style="max-width: 42rem">
-      <button class="copy" type="button" data-copy="bun install&#10;bun run dev&#10;bun run precheck">copy</button>
+      <button class="copy" type="button" data-copy="bun install&#10;bun run vendor:ripgrep&#10;bun run hooks&#10;bun run dev&#10;bun run precheck">copy</button>
       <pre><span class="sh">$ </span>bun install
+<span class="sh">$ </span>bun run vendor:ripgrep   <span class="cm"># rg for this machine; the search tools need it</span>
+<span class="sh">$ </span>bun run hooks            <span class="cm"># pre-commit formatting, once per clone</span>
 <span class="sh">$ </span>bun run dev              <span class="cm"># run it</span>
 <span class="sh">$ </span>bun run precheck         <span class="cm"># typecheck + lint + test</span>
 <span class="sh">$ </span>bun run capture:scenes   <span class="cm"># regenerate the scene assets from the engine</span></pre>
@@ -669,9 +672,10 @@
       </li>
       <li>
         <p>
-          <strong>At install time</strong> a ripgrep binary is downloaded from GitHub
-          releases for the search tools. That is a download, not an upload;
-          <code>CLAUDE_CODE_SKIP_POSTINSTALL=1</code> skips it.
+          <strong>Installing reaches nothing but the registry.</strong> There are no
+          install scripts, so nothing runs on your machine and nothing is fetched from
+          anywhere else — the ripgrep binaries the search tools need are already in
+          the package.
         </p>
       </li>
       <li>

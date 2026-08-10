@@ -73,11 +73,11 @@ Shader expressions go through a hand-written lexer and parser — no `eval`, no
 `Function` constructor, no property access — under hard caps, with a fuzz test.
 Details in [docs/features/theme-scenes.md](docs/features/theme-scenes.md).
 
-**Install-time behaviour.** `postinstall` downloads a ripgrep binary from
-GitHub releases for the search tools, and does nothing else — nothing is
-registered with your browser, and no other package here runs an install script.
-`CLAUDE_CODE_SKIP_POSTINSTALL=1` skips it; `RIPGREP_DOWNLOAD_BASE` points it
-elsewhere.
+**Installing runs nothing.** No `postinstall`, no lifecycle scripts of any
+kind, and no network beyond the registry itself. The ripgrep binaries the
+search tools need travel inside the package — all six platforms — rather than
+being fetched on your machine, so an install works offline, behind a firewall,
+and under `--ignore-scripts`. It costs about 13 MB.
 
 ## Building from source
 
@@ -85,8 +85,10 @@ Needs [Bun](https://bun.sh) ≥ 1.3.11.
 
 ```sh
 bun install
-bun run dev          # run it
-bun run precheck     # typecheck + lint + test
+bun run vendor:ripgrep   # fetch rg for this machine — the search tools need it
+bun run hooks            # pre-commit formatting, once per clone
+bun run dev              # run it
+bun run precheck         # typecheck + lint + test
 bun run capture:scenes   # regenerate the scene assets from the engine
 ```
 
@@ -106,9 +108,9 @@ servers, has no account, and collects nothing for itself.
 - **Off until you turn them on:** crash reporting (needs `SENTRY_DSN`), web
   search, and artifact publishing (needs a host you choose). None has a default
   destination.
-- **At install time** a ripgrep binary is downloaded from GitHub releases for
-  the search tools. That is a download, not an upload;
-  `CLAUDE_CODE_SKIP_POSTINSTALL=1` skips it.
+- **Installing reaches nothing but the registry.** There are no install
+  scripts, so nothing runs on your machine and nothing is fetched from anywhere
+  else — the ripgrep binaries the search tools need are already in the package.
 
 - **No feature-flag calls.** Upstream's client fetched configuration at every
   startup, carrying a device id and your account identifiers. It is off here

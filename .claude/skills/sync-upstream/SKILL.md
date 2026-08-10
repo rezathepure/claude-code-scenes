@@ -149,17 +149,25 @@ back toward upstream:
   `is1PEventLoggingEnabled()` and fetches from `api.anthropic.com` on every launch,
   carrying deviceId, sessionId, organizationUUID, accountUUID and email. A test asserts
   the switch has not drifted back. **Keep this on any merge that touches the file.**
-- **Nothing runs at install but the ripgrep download.** `@claude-code-best/mcp-chrome-bridge`
-  is not a dependency here and `scripts/setup-chrome-mcp.mjs` and
-  `scripts/run-parallel.mjs` are deleted. That package's own postinstall writes
-  `com.chromemcp.nativehost.json` into the Chrome profile — a native-messaging
-  manifest — on every `npm i -g`, with no way to decline, and it pulled 94
-  transitive packages for a bridge nothing in `src/` ever imported. This fork's
-  Chrome support is `src/utils/claudeInChrome/`, which registers its own host at
-  runtime and only when asked. `src/utils/__tests__/installScripts.test.ts`
-  asserts the dependency has not come back and that `postinstall` is still one
-  script. **A merge that restores any of it is wrong**, and it makes the README
-  and the landing page false where they promise install does nothing else.
+- **Installing this package runs nothing.** There is no `postinstall` and no
+  other lifecycle script, which is what npm's `allow-scripts` warning is about
+  and what the README and the landing page promise outright.
+  `src/utils/__tests__/installScripts.test.ts` fails if any of it comes back.
+  Two deletions hold it up, and **a merge that restores either is wrong**:
+  - `@claude-code-best/mcp-chrome-bridge` is not a dependency, and
+    `scripts/setup-chrome-mcp.mjs` and `scripts/run-parallel.mjs` are gone. That
+    package's own postinstall writes `com.chromemcp.nativehost.json` into the
+    Chrome profile — a native-messaging manifest — on every `npm i -g`, with no
+    way to decline, and it pulled 94 transitive packages for a bridge nothing in
+    `src/` ever imported. This fork's Chrome support is
+    `src/utils/claudeInChrome/`, which registers its own host at runtime and only
+    when asked.
+  - ripgrep is vendored into the tarball rather than downloaded on the user's
+    machine. `scripts/vendor-ripgrep.cjs` (upstream's `postinstall.cjs`) gained
+    an `--all` mode that fetches every target; `prepublishOnly` and the publish
+    workflow run it, and the workflow fails if any of the six is missing from
+    `dist/`. Costs ~13 MB and makes installs work offline and behind the GFW.
+    Contributors run `bun run vendor:ripgrep` once; CI does the same.
 - **Attribution** — `src/utils/attributionEmail.ts` maps non-Claude models to
   `noreply@model.invalid`, not to nine addresses at `claude-code-best.win`, and the
   commit/PR text says `claude-code-scenes`. These land in users' git history.
