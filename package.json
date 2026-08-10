@@ -48,9 +48,7 @@
     "!dist/vendor/ripgrep/**",
     "NOTICE.md",
     "LICENSE-SCENES",
-    "scripts/postinstall.cjs",
-    "scripts/run-parallel.mjs",
-    "scripts/setup-chrome-mcp.mjs"
+    "scripts/postinstall.cjs"
   ],
   "scripts": {
     "build": "bun run build.ts",
@@ -77,7 +75,7 @@
     "check:bundle": "bun run scripts/check-bundle-integrity.ts",
     "check:unused": "knip-bun",
     "health": "bun run scripts/health-check.ts",
-    "postinstall": "node scripts/run-parallel.mjs scripts/postinstall.cjs scripts/setup-chrome-mcp.mjs",
+    "postinstall": "node scripts/postinstall.cjs",
     "typecheck": "tsc --noEmit",
     "precheck": "bun run typecheck && bun run check:fix && bun test",
     "rcs": "bun run scripts/rcs.ts",
@@ -85,7 +83,6 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.19.0",
-    "@claude-code-best/mcp-chrome-bridge": "^3.0.1",
     "highlight.js": "^11.11.1",
     "undici": "^7.25.0",
     "ws": "^8.20.0"

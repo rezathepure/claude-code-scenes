@@ -149,6 +149,17 @@ back toward upstream:
   `is1PEventLoggingEnabled()` and fetches from `api.anthropic.com` on every launch,
   carrying deviceId, sessionId, organizationUUID, accountUUID and email. A test asserts
   the switch has not drifted back. **Keep this on any merge that touches the file.**
+- **Nothing runs at install but the ripgrep download.** `@claude-code-best/mcp-chrome-bridge`
+  is not a dependency here and `scripts/setup-chrome-mcp.mjs` and
+  `scripts/run-parallel.mjs` are deleted. That package's own postinstall writes
+  `com.chromemcp.nativehost.json` into the Chrome profile — a native-messaging
+  manifest — on every `npm i -g`, with no way to decline, and it pulled 94
+  transitive packages for a bridge nothing in `src/` ever imported. This fork's
+  Chrome support is `src/utils/claudeInChrome/`, which registers its own host at
+  runtime and only when asked. `src/utils/__tests__/installScripts.test.ts`
+  asserts the dependency has not come back and that `postinstall` is still one
+  script. **A merge that restores any of it is wrong**, and it makes the README
+  and the landing page false where they promise install does nothing else.
 - **Attribution** — `src/utils/attributionEmail.ts` maps non-Claude models to
   `noreply@model.invalid`, not to nine addresses at `claude-code-best.win`, and the
   commit/PR text says `claude-code-scenes`. These land in users' git history.

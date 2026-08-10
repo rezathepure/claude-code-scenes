@@ -74,9 +74,10 @@ Shader expressions go through a hand-written lexer and parser — no `eval`, no
 Details in [docs/features/theme-scenes.md](docs/features/theme-scenes.md).
 
 **Install-time behaviour.** `postinstall` downloads a ripgrep binary from
-GitHub releases for the search tools. `CLAUDE_CODE_SKIP_POSTINSTALL=1` skips
-it; `RIPGREP_DOWNLOAD_BASE` points it elsewhere. Chrome integration is opt-in
-via `CLAUDE_CODE_SETUP_CHROME_MCP=1` and does nothing otherwise.
+GitHub releases for the search tools, and does nothing else — nothing is
+registered with your browser, and no other package here runs an install script.
+`CLAUDE_CODE_SKIP_POSTINSTALL=1` skips it; `RIPGREP_DOWNLOAD_BASE` points it
+elsewhere.
 
 ## Building from source
 

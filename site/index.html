@@ -607,11 +607,10 @@
       <li>
         <p>
           <strong>Install-time behaviour.</strong> <code>postinstall</code> downloads a
-          ripgrep binary from GitHub releases for the search tools.
-          <code>CLAUDE_CODE_SKIP_POSTINSTALL=1</code> skips it;
-          <code>RIPGREP_DOWNLOAD_BASE</code> points it elsewhere. Chrome integration is
-          opt-in via <code>CLAUDE_CODE_SETUP_CHROME_MCP=1</code> and does nothing
-          otherwise.
+          ripgrep binary from GitHub releases for the search tools, and does nothing
+          else — nothing is registered with your browser, and no other package here
+          runs an install script. <code>CLAUDE_CODE_SKIP_POSTINSTALL=1</code> skips it;
+          <code>RIPGREP_DOWNLOAD_BASE</code> points it elsewhere.
         </p>
       </li>
     </ul>
