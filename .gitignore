@@ -68,3 +68,7 @@ _site/
 # gitignore takes the pattern literally, so a quoted one matches a filename
 # that contains quote characters and silently ignores nothing.
 to be filled later.md
+
+# Capture intermediates — HTML frames and screenshots, regenerable with
+# `bun run capture:demo` / `capture:starters` then scripts/encode-frames.sh
+.frames/

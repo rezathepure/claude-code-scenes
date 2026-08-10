@@ -60,6 +60,8 @@
     "dev": "bun run scripts/dev.ts",
     "dev:inspect": "bun run scripts/dev-debug.ts",
     "capture:scenes": "bun run scripts/capture-scene.ts && bun run scripts/render-scene-svg.ts",
+    "capture:demo": "bun run scripts/render-with-defines.ts scripts/capture-demo.tsx",
+    "capture:starters": "bun run scripts/render-with-defines.ts scripts/capture-starters.tsx",
     "prepublishOnly": "bun run build:vite",
     "lint": "biome lint .",
     "lint:fix": "biome lint --fix .",
