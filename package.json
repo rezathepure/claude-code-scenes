@@ -1,6 +1,6 @@
 {
   "name": "claude-code-scenes",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Animated themes for the Claude Code terminal — describe a vibe and the model designs the animation",
   "type": "module",
   "author": "Alireza Eftekhari (https://github.com/rezathepure)",
