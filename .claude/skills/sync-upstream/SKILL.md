@@ -97,7 +97,7 @@ bun run precheck
 ```
 
 **Compare against known failures, not a pass count** — the count rises whenever upstream
-adds tests. As of the 2026-07-30 sync the only failures are three pre-existing
+adds tests. As of the 2026-08-07 sync the only failures are three pre-existing
 skill-search tests, out of scope and unrelated to any merge:
 
 ```
@@ -134,10 +134,32 @@ user decide whether to push.
 These are intentional. A future sync should recognise them rather than "fixing" them
 back toward upstream:
 
-- **`package.json`** — the binaries are renamed `ccb` → `cct` (`cct`, `cct-bun`). Upstream
-  edits `version` on the line above; the two have never collided but they are close.
-- **`~/.claude/cct`** is the themes directory (upstream has no equivalent), with a
-  one-time migration from the old `cc-themes` name in `src/themes/migrate.ts`.
+- **`package.json`** — the binaries are renamed `ccb` → `ccs` (`ccs`, `ccs-bun`, plus
+  `claude-code-scenes`). Upstream edits `version` on the line above; the two have never
+  collided but they are close. The package itself is `claude-code-scenes` on its own
+  SemVer, with `upstreamBase` recording the fork point.
+- **`~/.claude/ccs`** is the themes directory (upstream has no equivalent).
+  `src/themes/migrate.ts` drains both older names — `cct`, then `cc-themes` — newest
+  first, and carries the `.seeded` record across so deleted starters stay deleted.
+- **`ccsMode`** replaces upstream's `ccbMode` settings key. Reads fall back to the old
+  key; a one-shot migration in `src/modes/store.ts` moves it and deletes the original.
+- **Feature flags are off by default.** `isGrowthBookEnabled()` in
+  `src/services/analytics/growthbook.ts` requires `CLAUDE_GB_ADAPTER_URL` +
+  `CLAUDE_GB_ADAPTER_KEY`; upstream's version returns true via
+  `is1PEventLoggingEnabled()` and fetches from `api.anthropic.com` on every launch,
+  carrying deviceId, sessionId, organizationUUID, accountUUID and email. A test asserts
+  the switch has not drifted back. **Keep this on any merge that touches the file.**
+- **Attribution** — `src/utils/attributionEmail.ts` maps non-Claude models to
+  `noreply@model.invalid`, not to nine addresses at `claude-code-best.win`, and the
+  commit/PR text says `claude-code-scenes`. These land in users' git history.
+- **`docs/` is gone** — upstream's Chinese architecture whitepaper (137 files, 44 MB)
+  along with `docs.json`, `mint.json` and the `docs:dev` script. Two files were kept:
+  `docs/features/theme-scenes.md` (ours) and `docs/agent/sur-skill-overflow-bugs.md`
+  (cited from source comments). A merge that restores any of it is wrong.
+- **Marketing assets are generated, not drawn** — `scripts/capture-demo.tsx`,
+  `capture-starters.tsx` and `lib/terminal-frame.tsx` render the real UI over the real
+  scene engine into `assets/demo/`. See their header comments before editing: they
+  depend on `FORCE_COLOR=3` and on every render sitting inside a `ThemeProvider`.
 - **The theme and scene subsystem is ours alone** — `src/themes/`, `src/scene/`,
   `src/commands/theme/`, `src/components/ThemeGrid/`, `docs/features/theme-scenes.md`.
   Upstream has none of it, so it can never conflict, but it does depend on upstream code:
