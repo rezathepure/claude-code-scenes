@@ -86,7 +86,7 @@ Needs [Bun](https://bun.sh) ≥ 1.3.11.
 bun install
 bun run dev          # run it
 bun run precheck     # typecheck + lint + test
-bun run capture:scenes   # regenerate the demo assets from the engine
+bun run capture:scenes   # regenerate the scene assets from the engine
 ```
 
 ## Where your data goes
