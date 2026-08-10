@@ -81,7 +81,7 @@
     "typecheck": "tsc --noEmit",
     "precheck": "bun run typecheck && bun run check:fix && bun test",
     "rcs": "bun run scripts/rcs.ts",
-    "site:build": "bun run capture:scenes && bun run scripts/build-site.ts"
+    "site:build": "bun run scripts/build-site.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.19.0",

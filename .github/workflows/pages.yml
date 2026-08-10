@@ -2,9 +2,10 @@ name: Pages
 
 # Builds and deploys the landing page.
 #
-# The scene demos are regenerated from the engine as part of `site:build`
-# rather than being served from committed assets, so a deploy can never show
-# an animation the code no longer produces.
+# The build is a copy: the page references the captures in assets/demo, which
+# are generated from the real interface by `capture:demo` and `capture:starters`
+# and committed, because encoding them needs headless Chrome and ffmpeg and this
+# runner has neither.
 #
 # One-time setup: repo Settings → Pages → Source = "GitHub Actions".
 
@@ -13,12 +14,8 @@ on:
     branches: [main]
     paths:
       - "site/**"
-      - "scripts/capture-scene.ts"
-      - "scripts/render-scene-svg.ts"
+      - "assets/demo/**"
       - "scripts/build-site.ts"
-      - "scripts/lib/scene-svg.ts"
-      - "src/scene/**"
-      - "src/themes/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
