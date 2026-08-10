@@ -272,7 +272,8 @@ Feature flags control which functionality is enabled at runtime. 代码中统一
 | OpenAI/Gemini/Grok 兼容层 | Restored |
 | Remote Control Server | Restored — 自托管 RCS + Web UI |
 | `packages/shell/`, `packages/swarm/`, `packages/mcp-server/`, `packages/cc-knowledge/` | Removed — 功能合并或废弃 |
-| Analytics / GrowthBook / Sentry | Empty implementations |
+| Analytics / Sentry | Empty implementations. Sentry only initialises if you set `SENTRY_DSN` |
+| GrowthBook | **完整实现（1262 行），但默认关闭。** 上游版本每次启动都向 `api.anthropic.com` 拉取 feature flag，并携带 deviceId / sessionId / organizationUUID / accountUUID / email。`isGrowthBookEnabled()` 现在只在设置了 `CLAUDE_GB_ADAPTER_URL` + `CLAUDE_GB_ADAPTER_KEY` 时返回 true，否则客户端根本不会被创建。所有 flag 读取回退到本地默认值 |
 | Magic Docs / LSP Server | Restored — Magic Docs 自动更新 + LSP 服务器管理器 |
 | Plugins / Marketplace | Restored — 插件安装/卸载/启用/禁用 + Marketplace 浏览 |
 | MCP OAuth | Simplified |

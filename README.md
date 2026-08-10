@@ -109,11 +109,9 @@ servers, has no account, and collects nothing for itself.
   the search tools. That is a download, not an upload;
   `CLAUDE_CODE_SKIP_POSTINSTALL=1` skips it.
 
-One thing inherited from upstream, stated plainly: at startup the feature-flag
-client fetches configuration from `api.anthropic.com`, sending a device id,
-session id and — if you are signed in — your account identifiers. It goes to
-Anthropic, not to us or to a third party, and it carries none of your
-conversation.
+- **No feature-flag calls.** Upstream's client fetched configuration at every
+  startup, carrying a device id and your account identifiers. It is off here
+  unless you point it at a server of your own.
 
 ## What this is, and what it is not
 

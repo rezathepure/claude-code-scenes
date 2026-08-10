@@ -488,15 +488,28 @@ function getLocalGateDefault(feature: string): unknown | undefined {
 }
 
 /**
- * Check if GrowthBook operations should be enabled
+ * Check if GrowthBook operations should be enabled.
+ *
+ * Off in this fork unless you point it at a server yourself.
+ *
+ * Inherited from upstream, this fetched feature flags from api.anthropic.com
+ * on every launch — interactive and headless, nothing gating it — sending a
+ * device id, a session id and, once signed in, organizationUUID, accountUUID
+ * and the account's email address. No conversation content, but identity, on
+ * startup, that nobody using this fork asked to send.
+ *
+ * The flags it fetched are Anthropic's, for rollouts of Anthropic's product.
+ * Nothing here depends on them: every read falls back to a local default, the
+ * same path already taken when a user is offline. So the honest default is
+ * off, and the README can say plainly that this project collects nothing.
+ *
+ * Set CLAUDE_GB_ADAPTER_URL and CLAUDE_GB_ADAPTER_KEY to run flags against a
+ * server you control.
  */
 function isGrowthBookEnabled(): boolean {
-  // 适配器模式：有自定义服务器配置时直接启用
-  if (process.env.CLAUDE_GB_ADAPTER_URL && process.env.CLAUDE_GB_ADAPTER_KEY) {
-    return true
-  }
-  // GrowthBook depends on 1P event logging.
-  return is1PEventLoggingEnabled()
+  return Boolean(
+    process.env.CLAUDE_GB_ADAPTER_URL && process.env.CLAUDE_GB_ADAPTER_KEY,
+  )
 }
 
 /**
