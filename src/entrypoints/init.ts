@@ -61,6 +61,7 @@ import { seedStarterThemes } from '../themes/seed.js'
 import { loadUserThemes } from '../themes/loader.js'
 import { migrateLegacyThemes } from '../themes/migrate.js'
 import { initializeThemeWatcher } from '../themes/watcher.js'
+import { getInitialThemeExperiencePatch } from '../themes/firstRun.js'
 import { migrateLegacyModeSetting } from '../modes/store.js'
 
 // initialize1PEventLogging is dynamically imported to defer OpenTelemetry sdk-logs/resources
@@ -88,7 +89,7 @@ export const init = memoize(async (): Promise<void> => {
     // Put the shipped starter themes on disk. After the migration, so a file
     // the user already had wins over the shipped copy, and before the load
     // below, which is what actually registers them.
-    await seedStarterThemes()
+    const { written: seededThemes } = await seedStarterThemes()
     // Registers every theme, and must happen before anything reads the stored
     // theme preference — otherwise validateThemeSetting below would report the
     // user's theme as missing and quietly reset their choice to dark.
@@ -98,6 +99,10 @@ export const init = memoize(async (): Promise<void> => {
         level: warning.severity === 'error' ? 'warn' : 'info',
       })
     }
+    saveGlobalConfig(current => {
+      const patch = getInitialThemeExperiencePatch(current, seededThemes)
+      return patch === null ? current : { ...current, ...patch }
+    })
     // Live reload only matters when there is a UI to repaint, and holding a
     // file watch in a one-shot `-p` run would only delay exit.
     if (!getIsNonInteractiveSession()) {

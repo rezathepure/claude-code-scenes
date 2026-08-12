@@ -361,6 +361,9 @@ export type GlobalConfig = {
   // Opus 1M merge notice tracking
   opus1mMergeNoticeSeenCount?: number // Number of times the opus-1m-merge notice has been shown
 
+  // CCS theme discovery
+  ccsThemeHintSeenCount?: number // Number of first-run /theme hints shown
+
   // Experiment enrollment notice tracking (keyed by experiment id)
   experimentNoticesSeenCount?: Record<string, number>
 
@@ -604,7 +607,7 @@ function createDefaultGlobalConfig(): GlobalConfig {
     numStartups: 0,
     installMethod: undefined,
     autoUpdates: undefined,
-    theme: 'dark',
+    theme: 'matrix',
     preferredNotifChannel: 'auto',
     verbose: false,
     editorMode: 'normal',

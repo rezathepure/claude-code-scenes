@@ -41,6 +41,7 @@ import { getStartupPerfLogPath, isDetailedProfilingEnabled } from 'src/utils/sta
 import { EmergencyTip } from './EmergencyTip.js';
 import { VoiceModeNotice } from './VoiceModeNotice.js';
 import { Opus1mMergeNotice } from './Opus1mMergeNotice.js';
+import { ThemeDiscoveryHint } from './ThemeDiscoveryHint.js';
 import { GateOverridesWarning } from './GateOverridesWarning.js';
 import { ExperimentEnrollmentNotice } from './ExperimentEnrollmentNotice.js';
 import { feature } from 'bun:bundle';
@@ -150,6 +151,7 @@ export function LogoV2(): React.ReactNode {
         <CondensedLogo />
         <VoiceModeNotice />
         <Opus1mMergeNotice />
+        <ThemeDiscoveryHint />
         {ChannelsNoticeModule && <ChannelsNoticeModule.ChannelsNotice />}
         {isDebugMode() && (
           <Box paddingLeft={2} flexDirection="column">
@@ -251,6 +253,7 @@ export function LogoV2(): React.ReactNode {
         </OffscreenFreeze>
         <VoiceModeNotice />
         <Opus1mMergeNotice />
+        <ThemeDiscoveryHint />
         {ChannelsNoticeModule && <ChannelsNoticeModule.ChannelsNotice />}
         {showSandboxStatus && (
           <Box marginTop={1} flexDirection="column">
@@ -350,6 +353,7 @@ export function LogoV2(): React.ReactNode {
       </OffscreenFreeze>
       <VoiceModeNotice />
       <Opus1mMergeNotice />
+      <ThemeDiscoveryHint />
       {ChannelsNoticeModule && <ChannelsNoticeModule.ChannelsNotice />}
       {isDebugMode() && (
         <Box paddingLeft={2} flexDirection="column">
