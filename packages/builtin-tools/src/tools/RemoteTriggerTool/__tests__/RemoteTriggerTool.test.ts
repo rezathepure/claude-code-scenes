@@ -41,20 +41,6 @@ mock.module('src/services/policyLimits/index.js', () => ({
   isPolicyAllowed: () => true,
 }))
 
-// Narrow mock for the side-effectful entries in `src/constants/oauth.js`.
-// Pure data exports (ALL_OAUTH_SCOPES, CLAUDE_AI_*_SCOPE, etc.) come from
-// the real module and are not mocked, per the test policy that constants
-// modules without side effects should not be replaced wholesale.
-mock.module('src/constants/oauth.js', () => {
-  const actual = require('../../../../../../src/constants/oauth.js')
-  return {
-    ...actual,
-    fileSuffixForOauthConfig: () => '',
-    getOauthConfig: () => ({ BASE_API_URL: 'https://example.test' }),
-    MCP_CLIENT_METADATA_URL: 'https://example.test/oauth/metadata',
-  }
-})
-
 mock.module('src/utils/remoteTriggerAudit.js', () => ({
   appendRemoteTriggerAuditRecord: async (record: Record<string, unknown>) => {
     const fullRecord = {
